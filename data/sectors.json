@@ -1,0 +1,126 @@
+{
+  "version": "1.0.0",
+  "reference": "NIS2 Directive (EU) 2022/2555 - Annex I (Essential) & Annex II (Important), with ENISA and ATT&CK x_mitre_industries aliases.",
+  "sectors": [
+    {
+      "name": "Telecommunications",
+      "nis2_annex": "I",
+      "nis2_category": "Digital Infrastructure - Providers of public electronic communications networks/services",
+      "aliases": ["Telecom", "Telecoms", "Telecommunication", "Telco", "Communications", "Public electronic communications", "telecommunications"]
+    },
+    {
+      "name": "Submarine Cable Operators",
+      "nis2_annex": "I",
+      "nis2_category": "Digital Infrastructure - Submarine cable operators",
+      "aliases": ["Submarine Cables", "Subsea Cables", "Undersea Cables", "Cable Landing Stations", "Submarine cable"]
+    },
+    {
+      "name": "Maritime Transport",
+      "nis2_annex": "I",
+      "nis2_category": "Transport - Water",
+      "aliases": ["Maritime", "Shipping", "Water transport", "Ports", "Port operations", "Maritime industry"]
+    },
+    {
+      "name": "Energy",
+      "nis2_annex": "I",
+      "nis2_category": "Energy (Electricity, Gas, Oil, District heating, Hydrogen)",
+      "aliases": ["Electricity", "Power", "Utilities", "Oil and Gas", "Gas", "Oil", "Power generation", "Energy sector"]
+    },
+    {
+      "name": "Banking",
+      "nis2_annex": "I",
+      "nis2_category": "Banking",
+      "aliases": ["Banks", "Retail banking", "Commercial banking", "Bank"]
+    },
+    {
+      "name": "Financial Market Infrastructure",
+      "nis2_annex": "I",
+      "nis2_category": "Financial market infrastructures",
+      "aliases": ["Financial services", "Finance", "Stock exchange", "Trading venues", "Central counterparties", "FMI"]
+    },
+    {
+      "name": "Healthcare",
+      "nis2_annex": "I",
+      "nis2_category": "Health",
+      "aliases": ["Health", "Medical", "Hospitals", "Healthcare providers", "Pharmaceutical", "Pharma", "Medical devices"]
+    },
+    {
+      "name": "Drinking Water",
+      "nis2_annex": "I",
+      "nis2_category": "Drinking water",
+      "aliases": ["Water supply", "Potable water", "Water utilities"]
+    },
+    {
+      "name": "Wastewater",
+      "nis2_annex": "I",
+      "nis2_category": "Wastewater",
+      "aliases": ["Sewage", "Wastewater treatment"]
+    },
+    {
+      "name": "Digital Infrastructure",
+      "nis2_annex": "I",
+      "nis2_category": "Digital Infrastructure (IXP, DNS, TLD, Cloud, Data centers, CDN, Trust services)",
+      "aliases": ["IXP", "DNS", "Cloud computing", "Cloud", "Data centers", "CDN", "Trust services", "TLD registry"]
+    },
+    {
+      "name": "ICT Service Management",
+      "nis2_annex": "I",
+      "nis2_category": "ICT service management (B2B managed services / managed security services)",
+      "aliases": ["MSP", "MSSP", "Managed services", "Managed security services", "IT services"]
+    },
+    {
+      "name": "Public Administration",
+      "nis2_annex": "I",
+      "nis2_category": "Public administration entities (central/regional)",
+      "aliases": ["Government", "Public sector", "Central government", "Regional government", "Gov", "Govt"]
+    },
+    {
+      "name": "Space",
+      "nis2_annex": "I",
+      "nis2_category": "Space",
+      "aliases": ["Space sector", "Aerospace", "Satellite", "Satellite operators"]
+    },
+    {
+      "name": "Postal and Courier",
+      "nis2_annex": "II",
+      "nis2_category": "Postal and courier services",
+      "aliases": ["Postal", "Courier", "Logistics - postal", "Mail services"]
+    },
+    {
+      "name": "Waste Management",
+      "nis2_annex": "II",
+      "nis2_category": "Waste management",
+      "aliases": ["Waste", "Recycling"]
+    },
+    {
+      "name": "Chemicals",
+      "nis2_annex": "II",
+      "nis2_category": "Manufacture, production and distribution of chemicals",
+      "aliases": ["Chemical industry", "Chemical manufacturing", "Chemicals industry"]
+    },
+    {
+      "name": "Food",
+      "nis2_annex": "II",
+      "nis2_category": "Production, processing and distribution of food",
+      "aliases": ["Food industry", "Agri-food", "Food production", "Food and beverage", "F&B"]
+    },
+    {
+      "name": "Manufacturing",
+      "nis2_annex": "II",
+      "nis2_category": "Manufacturing (medical devices, computer/electronic, electrical, machinery, motor vehicles, transport equipment)",
+      "aliases": ["Industrial", "Manufacturing - general", "Heavy manufacturing", "Automotive", "Machinery"]
+    },
+    {
+      "name": "Digital Providers",
+      "nis2_annex": "II",
+      "nis2_category": "Digital providers (online marketplaces, search engines, social networks)",
+      "aliases": ["Online marketplace", "Search engines", "Social networks", "Online platforms", "E-commerce"]
+    },
+    {
+      "name": "Research",
+      "nis2_annex": "II",
+      "nis2_category": "Research organisations",
+      "aliases": ["Academic", "Universities", "R&D", "Research and development", "Higher education"]
+    }
+  ]
+}

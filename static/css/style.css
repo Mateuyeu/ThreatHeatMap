@@ -1,0 +1,112 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #1f2937;
+  background: #f8fafc;
+}
+header {
+  padding: 1.25rem 2rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  align-items: flex-end;
+}
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 12rem;
+}
+.control.buttons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+select, input, button {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.35rem;
+  background: #ffffff;
+  color: #1f2937;
+}
+button {
+  cursor: pointer;
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #1e293b;
+}
+button:hover { background: #0f172a; }
+#heatmap {
+  padding: 1rem 2rem 0.5rem;
+  min-height: 560px;
+}
+#actor-detail {
+  margin: 1rem 2rem;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+}
+#actor-detail.hidden { display: none; }
+#actor-detail h2 { margin-top: 0; font-size: 1.1rem; }
+#actor-detail-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+#actor-detail-body th, #actor-detail-body td {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+#actor-detail-body th { color: #64748b; font-weight: 600; }
+.kv-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  font-size: 0.85rem;
+}
+.kv-grid .k { color: #64748b; }
+footer {
+  padding: 0.75rem 2rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.78rem;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #f1f5f9;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+}

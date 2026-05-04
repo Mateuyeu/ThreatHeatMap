@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ThreatHeatMap</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body>
+  <header>
+    <h1>ThreatHeatMap</h1>
+    <p class="subtitle">Sectoral threat actor positioning &mdash; Phase 1 (synthetic data)</p>
+  </header>
+
+  <section class="controls">
+    <div class="control">
+      <label for="sector">Sector</label>
+      <select id="sector"></select>
+    </div>
+    <div class="control">
+      <label for="window">Time window</label>
+      <select id="window"></select>
+    </div>
+    <div class="control">
+      <label for="client">Client profile</label>
+      <select id="client"></select>
+    </div>
+    <div class="control">
+      <label for="security_score">SecurityScore override (0&ndash;100)</label>
+      <input type="number" id="security_score" min="0" max="100" step="1" placeholder="(per-actor default)" />
+    </div>
+    <div class="control buttons">
+      <button id="refresh" type="button">Refresh data</button>
+      <button id="export-png" type="button">Export PNG</button>
+      <button id="export-svg" type="button">Export SVG</button>
+      <button id="export-json" type="button">Export JSON</button>
+    </div>
+  </section>
+
+  <section id="heatmap"></section>
+
+  <section id="actor-detail" class="hidden">
+    <h2 id="actor-detail-name"></h2>
+    <div id="actor-detail-body"></div>
+    <button id="actor-detail-close" type="button">Close</button>
+  </section>
+
+  <footer>
+    <div id="formula-banner"></div>
+    <div id="data-banner"></div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/heatmap.js') }}"></script>
+</body>
+</html>
