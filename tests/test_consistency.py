@@ -90,3 +90,27 @@ def test_alias_resolution(client):
     resp = client.get("/api/actors?sector=Telco&window_months=6")
     assert resp.status_code == 200
     assert resp.get_json()["sector"] == "Telecommunications"
+
+
+# --- C.3: /methodology route -------------------------------------------
+
+def test_methodology_route_serves_markdown_as_plain_text(client):
+    resp = client.get("/methodology")
+    assert resp.status_code == 200
+    ctype = resp.headers.get("Content-Type", "")
+    assert ctype.startswith("text/plain"), f"unexpected content-type: {ctype!r}"
+    body = resp.get_data(as_text=True)
+    # Sanity-check we are serving METHODOLOGY.md and not an empty placeholder.
+    assert "Note méthodologique" in body
+    assert "P_sect" in body  # core variable defined in section 2
+
+
+def test_actors_payload_carries_extracted_at_and_until(client):
+    """The C.3 banner needs both 'until' and 'extracted_at' from /api/actors."""
+    resp = client.get("/api/actors?sector=Telecommunications&window_months=6")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert "until" in payload and payload["until"], "missing 'until' in /api/actors"
+    assert "extracted_at" in payload and payload["extracted_at"], "missing 'extracted_at'"
+    # ISO-8601 with trailing Z
+    assert payload["extracted_at"].endswith("Z")

@@ -67,21 +67,87 @@ async function bootstrap() {
     `Default SecurityScore: <code>${cfg.default_security_score}</code>`;
 
   attachHandlers();
+  disableRefreshIfFixture();
   await reload();
 }
 
 function attachHandlers() {
-  ["sector", "window", "client", "security_score"].forEach(id => {
+  // SecurityScore Override is intentionally NOT in this list: per C.3, it
+  // recalculates only on Apply click or Enter key, not on every keystroke.
+  ["sector", "window", "client"].forEach(id => {
     $(id).addEventListener("change", onFilterChange);
   });
+
   $("refresh").addEventListener("click", async () => {
+    if ($("refresh").disabled) return;
     await fetchJSON("/api/refresh", {method: "POST"});
     await onFilterChange();
   });
+
+  // SecurityScore Override: Apply button + Enter key.
+  $("security_score_apply").addEventListener("click", applySecurityScore);
+  $("security_score").addEventListener("keydown", evt => {
+    if (evt.key === "Enter") {
+      evt.preventDefault();
+      applySecurityScore();
+    }
+  });
+  $("security_score").addEventListener("input", () => {
+    // Clear any prior validation error as soon as the user starts editing.
+    $("security_score").classList.remove("invalid");
+  });
+
   $("export-png").addEventListener("click", () => exportImage("png"));
   $("export-svg").addEventListener("click", () => exportImage("svg"));
   $("export-json").addEventListener("click", exportJSON);
   $("actor-detail-close").addEventListener("click", closeActorDetail);
+}
+
+function disableRefreshIfFixture() {
+  const cfg = state.config || {};
+  const btn = $("refresh");
+  if (cfg.active_victims_adapter === "fixture") {
+    btn.disabled = true;
+    btn.title = "Phase 1 — synthetic data, refresh available from Phase 2 (MITRE STIX/TAXII connector)";
+  } else {
+    btn.disabled = false;
+    btn.title = "";
+  }
+}
+
+function showSecurityScoreFeedback(message, kind) {
+  const slot = $("security_score_feedback");
+  slot.innerHTML = `<span class="badge">${message}</span>`;
+  if (kind === "applied") {
+    const btn = $("security_score_apply");
+    btn.classList.add("flash");
+    setTimeout(() => btn.classList.remove("flash"), 200);
+  }
+  setTimeout(() => {
+    slot.innerHTML = "";
+  }, 1500);
+}
+
+async function applySecurityScore() {
+  const input = $("security_score");
+  const raw = input.value.trim();
+  if (raw === "") {
+    input.classList.remove("invalid");
+    showSecurityScoreFeedback("Reset to default", "applied");
+    await onFilterChange();
+    return;
+  }
+  const v = Number(raw);
+  if (!Number.isFinite(v) || v < 0 || v > 100) {
+    input.classList.add("invalid");
+    input.title = "SecurityScore must be a number between 0 and 100";
+    showSecurityScoreFeedback("Invalid: 0–100 only", "error");
+    return;
+  }
+  input.classList.remove("invalid");
+  input.title = "";
+  showSecurityScoreFeedback("Applied", "applied");
+  await onFilterChange();
 }
 
 async function onFilterChange() {
@@ -114,6 +180,32 @@ async function reload() {
   const data = await fetchJSON(`/api/actors?${params.toString()}`);
   state.lastResponse = data;
   renderHeatmap(data);
+  renderContextBanner(data);
+}
+
+function formatExtractedAt(iso) {
+  if (!iso) return "—";
+  // Server returns ISO 8601 with trailing Z; strip subseconds for legibility.
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+}
+
+function renderContextBanner(data) {
+  const el = $("context-banner");
+  if (!el || !data) return;
+  const since = data.since || "—";
+  const until = data.until || "—";
+  const window = data.window_months != null ? `${data.window_months} mo` : "—";
+  const client = data.client || "—";
+  const extracted = formatExtractedAt(data.extracted_at);
+  el.innerHTML = [
+    `<span><span class="ctx-key">Sector:</span>${escapeHtml(data.sector || "—")}</span>`,
+    `<span><span class="ctx-key">Window:</span>${escapeHtml(since)} &rarr; ${escapeHtml(until)} (${escapeHtml(window)})</span>`,
+    `<span><span class="ctx-key">Client profile:</span>${escapeHtml(client)}</span>`,
+    `<span><span class="ctx-key">Data extracted:</span>${escapeHtml(extracted)}</span>`,
+  ].join("");
 }
 
 // Type -> color mapping. Source of truth for the enum lives in
@@ -261,11 +353,9 @@ function renderHeatmap(data) {
     });
   }
 
+  // The C.3 context banner above the chart now carries Sector / Window /
+  // Client / Data-extracted, so the Plotly title is intentionally empty.
   const layout = {
-    title: {
-      text: `Sector: ${data.sector}  |  since ${data.since}  (${data.window_months} mo)  |  client: ${data.client}`,
-      font: {size: 14},
-    },
     xaxis: {title: "Opportunity (X)", range: [0, 100], dtick: 10, zeroline: false, gridcolor: "#e2e8f0"},
     yaxis: {title: "Intent (Y)",      range: [0, 100], dtick: 10, zeroline: false, gridcolor: "#e2e8f0"},
     shapes: [

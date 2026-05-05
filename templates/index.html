@@ -26,8 +26,12 @@
       <select id="client"></select>
     </div>
     <div class="control">
-      <label for="security_score">SecurityScore override (0&ndash;100)</label>
-      <input type="number" id="security_score" min="0" max="100" step="1" placeholder="(per-actor default)" />
+      <label for="security_score">SecurityScore Override (0&ndash;100)</label>
+      <div class="control-row">
+        <input type="number" id="security_score" min="0" max="100" step="1" placeholder="(per-actor default)" />
+        <button id="security_score_apply" type="button">Apply</button>
+      </div>
+      <div id="security_score_feedback" class="feedback-slot"></div>
     </div>
     <div class="control buttons">
       <button id="refresh" type="button">Refresh data</button>
@@ -36,6 +40,8 @@
       <button id="export-json" type="button">Export JSON</button>
     </div>
   </section>
+
+  <section id="context-banner"></section>
 
   <section id="heatmap"></section>
 
@@ -48,6 +54,9 @@
   <footer>
     <div id="formula-banner"></div>
     <div id="data-banner"></div>
+    <div id="methodology-link">
+      <a href="/methodology" target="_blank" rel="noopener noreferrer">(see METHODOLOGY.md)</a>
+    </div>
   </footer>
 
   <script src="{{ url_for('static', filename='js/heatmap.js') }}"></script>

@@ -40,6 +40,41 @@ header h1 {
   gap: 0.5rem;
   align-items: center;
 }
+.control-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+.control-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.control-row button {
+  flex: 0 0 auto;
+}
+.feedback-slot {
+  min-height: 1.1rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+.feedback-slot .badge {
+  margin-left: 0;
+}
+input.invalid {
+  border-color: #dc2626;
+  outline-color: #dc2626;
+}
+button[disabled],
+button[disabled]:hover {
+  background: #cbd5e1;
+  border-color: #cbd5e1;
+  color: #475569;
+  cursor: not-allowed;
+}
+button.flash {
+  background: #16a34a;
+  border-color: #16a34a;
+}
 label {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -61,9 +96,33 @@ button {
   border-color: #1e293b;
 }
 button:hover { background: #0f172a; }
+#context-banner {
+  padding: 0.5rem 2rem 0;
+  font-size: 0.85rem;
+  color: #334155;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  line-height: 1.4;
+}
+#context-banner .ctx-key {
+  color: #64748b;
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
 #heatmap {
   padding: 1rem 2rem 0.5rem;
   min-height: 560px;
+}
+#methodology-link {
+  margin-top: 0.25rem;
+}
+#methodology-link a {
+  color: #475569;
+  text-decoration: none;
+}
+#methodology-link a:hover {
+  text-decoration: underline;
 }
 #actor-detail {
   margin: 1rem 2rem;

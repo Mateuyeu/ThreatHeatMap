@@ -117,6 +117,23 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/methodology")
+def methodology():
+    """Serve METHODOLOGY.md verbatim as text/plain.
+
+    Per C.3 spec the analyst opens the methodology note in a new tab from the
+    UI footer. We do not render Markdown server-side in Phase 1; raw text is
+    legible enough and keeps the dependency surface flat.
+    """
+    path = config.BASE_DIR / "METHODOLOGY.md"
+    if not path.exists():
+        abort(404, description="METHODOLOGY.md not found.")
+    return path.read_text(encoding="utf-8"), 200, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
 @app.route("/api/sectors")
 def api_sectors():
     sectors = normalizer.canonical_sectors(config.SECTORS_PATH)

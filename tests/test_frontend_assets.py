@@ -96,3 +96,72 @@ def test_quadrant_thresholds_pulled_from_api_config(js_source):
     knobs in config.py actually take effect."""
     assert "quadrant_threshold_x" in js_source
     assert "quadrant_threshold_y" in js_source
+
+
+# --- C.3: enriched context banner --------------------------------------
+
+def test_context_banner_renders_all_required_fields(js_source):
+    """The banner must surface Sector, Window (since -> until), Client
+    profile, and Data extracted (UTC). Source-level smoke check."""
+    assert "renderContextBanner" in js_source, "renderContextBanner function missing"
+    for label in ["Sector:", "Window:", "Client profile:", "Data extracted:"]:
+        assert label in js_source, f"context banner missing {label!r} label"
+
+
+def test_context_banner_uses_extracted_at_and_until(js_source):
+    """The banner must consume both new payload fields, not fabricate them."""
+    assert "data.extracted_at" in js_source or "extracted_at" in js_source
+    assert "data.until" in js_source or "data.until" in js_source
+
+
+# --- C.3: SecurityScore Apply button -----------------------------------
+
+def test_security_score_not_in_change_listener_array(js_source):
+    """Per C.3, SecurityScore Override must NOT trigger a recalc on every
+    keystroke. Only Apply click or Enter key should fire onFilterChange."""
+    # The change-listener array binds these IDs to onFilterChange directly.
+    match = re.search(r'\[\s*"sector"\s*,\s*"window"\s*,\s*"client"\s*\]', js_source)
+    assert match, "Could not locate the change-listener array; if you renamed it, update this test"
+    assert "security_score" not in match.group(0), (
+        "security_score must not be in the change-listener array (recalc should "
+        "only fire on Apply / Enter)"
+    )
+
+
+def test_security_score_apply_button_wired(js_source):
+    assert "applySecurityScore" in js_source, "applySecurityScore handler missing"
+    assert "security_score_apply" in js_source, "Apply button id reference missing"
+    # Enter key handling on the input itself
+    assert re.search(r'security_score.*keydown', js_source, re.DOTALL), (
+        "Enter-key handler on security_score input not wired"
+    )
+
+
+def test_security_score_validates_0_to_100(js_source):
+    """Validation must reject values outside [0, 100] before applying."""
+    assert "v < 0 || v > 100" in js_source, (
+        "Validation guard for SecurityScore range [0, 100] missing"
+    )
+
+
+# --- C.3: Refresh button disabled on fixture ----------------------------
+
+def test_refresh_disabled_when_active_adapter_is_fixture(js_source):
+    assert "disableRefreshIfFixture" in js_source
+    assert 'active_victims_adapter === "fixture"' in js_source, (
+        "Refresh button must be disabled when active_victims_adapter is the fixture"
+    )
+    # The C.3 spec mandates the explicit tooltip text
+    assert "Phase 2 (MITRE STIX/TAXII connector)" in js_source
+
+
+# --- C.3: methodology link in footer -----------------------------------
+
+INDEX_PATH = (Path(__file__).resolve().parents[1]) / "templates" / "index.html"
+
+
+def test_index_html_links_to_methodology():
+    html = INDEX_PATH.read_text(encoding="utf-8")
+    assert 'href="/methodology"' in html, "Footer methodology link missing"
+    assert 'target="_blank"' in html
+    assert 'rel="noopener noreferrer"' in html
