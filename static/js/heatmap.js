@@ -269,10 +269,15 @@ function renderHeatmap(data) {
     xaxis: {title: "Opportunity (X)", range: [0, 100], dtick: 10, zeroline: false, gridcolor: "#e2e8f0"},
     yaxis: {title: "Intent (Y)",      range: [0, 100], dtick: 10, zeroline: false, gridcolor: "#e2e8f0"},
     shapes: [
-      {type: "line", x0: tx, x1: tx, y0: 0, y1: 100,
-       line: {color: "rgba(153,153,153,0.3)", width: 1, dash: "dot"}},
-      {type: "line", x0: 0, x1: 100, y0: ty, y1: ty,
-       line: {color: "rgba(153,153,153,0.3)", width: 1, dash: "dot"}},
+      // Quadrant separators. Explicit xref/yref + layer:'below' so they
+      // anchor on the data axes and render under the markers; a wider
+      // dotted stroke survives sub-pixel rounding at typical zooms.
+      {type: "line", xref: "x", yref: "y", layer: "below",
+       x0: tx, x1: tx, y0: 0, y1: 100,
+       line: {color: "rgba(99,99,99,0.5)", width: 1.5, dash: "dot"}},
+      {type: "line", xref: "x", yref: "y", layer: "below",
+       x0: 0, x1: 100, y0: ty, y1: ty,
+       line: {color: "rgba(99,99,99,0.5)", width: 1.5, dash: "dot"}},
     ],
     annotations: [
       {x: (tx + 100) / 2, y: 96, text: "High intent / High opportunity",
@@ -340,7 +345,9 @@ function mitreCell(actor) {
   if (!actor.mitre_url) {
     return `not assigned`;
   }
-  const id = actor.mitre_id || "MITRE ATT&amp;CK";
+  // Use the literal & here. escapeHtml() encodes it once at output time;
+  // pre-encoding (&amp;) would double-encode and surface "&amp;" to the user.
+  const id = actor.mitre_id || "MITRE ATT&CK";
   return `<a href="${escapeHtml(actor.mitre_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(id)}</a>`;
 }
 
