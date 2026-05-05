@@ -121,3 +121,18 @@ code {
   border: 1px solid #fcd34d;
   vertical-align: middle;
 }
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+th.sortable:hover {
+  background: #f1f5f9;
+}
+#actor-detail-body small {
+  color: #64748b;
+  font-weight: normal;
+}
+#actor-detail-body h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.95rem;
+}

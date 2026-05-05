@@ -48,3 +48,6 @@ DEFAULT_TIME_WINDOW_MONTHS = 6
 # --- Heat map visualization -------------------------------------------
 QUADRANT_THRESHOLD_X = 50  # Opportunity (X) split between low/high quadrants
 QUADRANT_THRESHOLD_Y = 50  # Intent (Y) split between low/high quadrants
+MARKER_SIZE_MIN = 8        # Pixel size for actors with 0 victims in window
+MARKER_SIZE_MAX = 24       # Pixel size for the most prolific actor in window
+MARKER_SIZE_FALLBACK = 12  # Uniform size when every actor has 0 victims

@@ -6,6 +6,7 @@ const state = {
   config: null,
   lastResponse: null,
   openActorId: null,
+  tableSort: {},  // keyed per-table; preserves user sort across re-renders
 };
 
 function $(id) { return document.getElementById(id); }
@@ -136,11 +137,25 @@ function typeLabel(type) {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
-function actorSize(actor) {
-  // Sizing is encoded on `victims_total_window` (backend field set by
-  // scoring/scorer.py). The C.2 spec calls it "total victims in window".
-  const v = actor.victims_total_window || 0;
-  return Math.max(10, Math.min(34, 10 + v * 3));
+// Marker size encodes `victims_total_window` (backend field set by
+// scoring/scorer.py). The C.2 spec calls it "total victims in window".
+// Linear mapping into [MARKER_SIZE_MIN, MARKER_SIZE_MAX] from /api/config,
+// scaled against the max in the current dataset. Falls back to a uniform
+// MARKER_SIZE_FALLBACK when every actor is at zero.
+function buildSizeScaler(actors) {
+  const cfg = state.config || {};
+  const minSize = cfg.marker_size_min ?? 8;
+  const maxSize = cfg.marker_size_max ?? 24;
+  const fallback = cfg.marker_size_fallback ?? 12;
+  const counts = actors.map(a => a.victims_total_window || 0);
+  const peak = Math.max(0, ...counts);
+  if (peak === 0) {
+    return () => fallback;
+  }
+  return (a) => {
+    const v = a.victims_total_window || 0;
+    return minSize + (v / peak) * (maxSize - minSize);
+  };
 }
 
 function hoverText(actor) {
@@ -153,7 +168,8 @@ function hoverText(actor) {
     `Type: ${actor.type || "n/a"} &middot; Country: ${actor.country || "n/a"}`,
     `Intent (Y): ${actor.y}  &middot;  Opportunity (X): ${actor.x}`,
     `P_sect: ${actor.p_sect}  &middot;  P_ttp: ${actor.p_ttp}  &middot;  SecurityScore: ${actor.security_score}`,
-    `Victims (window): ${actor.victims_total_window} &middot; in sector: ${actor.victims_in_sector}`,
+    `Victims in sector (window): ${actor.victims_in_sector}`,
+    `Total victims (window, all sectors): ${actor.victims_total_window}  <i>(point size)</i>`,
     "Top TTPs:<br>  &middot; " + (ttps || "&mdash;"),
   ].join("<br>");
 }
@@ -218,6 +234,7 @@ function renderHeatmap(data) {
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(a);
   }
+  const sizeFor = buildSizeScaler(actors);
   const traces = [];
   for (const type of TYPE_ORDER) {
     const group = grouped.get(type);
@@ -235,7 +252,7 @@ function renderHeatmap(data) {
       customdata: group.map(a => a.id),
       hovertemplate: group.map(a => hoverText(a) + "<extra></extra>"),
       marker: {
-        size: group.map(actorSize),
+        size: group.map(sizeFor),
         color: typeColor(type),
         line: {width: 1, color: "#0f172a"},
         opacity: 0.85,
@@ -294,6 +311,85 @@ function renderHeatmap(data) {
   });
 }
 
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function fmt2(n) {
+  return Number.isFinite(n) ? n.toFixed(2) : String(n);
+}
+
+function pSectSourceLabel(src) {
+  if (src === "victims_ratio") return "calculated from window";
+  if (src === "baseline_fallback") return "baseline fallback";
+  return src || "n/a";
+}
+
+function sharedLabel(n) {
+  if (!n || n <= 0) return "Unique to this actor";
+  return `Shared with ${n} actor${n > 1 ? "s" : ""}`;
+}
+
+function mitreCell(actor) {
+  if (!actor.mitre_url) {
+    return `not assigned`;
+  }
+  const id = actor.mitre_id || "MITRE ATT&amp;CK";
+  return `<a href="${escapeHtml(actor.mitre_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(id)}</a>`;
+}
+
+// Sortable table rendering helpers. Each table tracks its current sort key
+// and direction in `state.tableSort[<key>]`. Clicking a header toggles or
+// switches the sort.
+function renderSortableTable(containerId, columns, rows, sortKey, defaultSort) {
+  const sortState = state.tableSort[sortKey] || {...defaultSort};
+  state.tableSort[sortKey] = sortState;
+  const sorted = [...rows].sort((a, b) => {
+    const va = a[sortState.field];
+    const vb = b[sortState.field];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === "number" && typeof vb === "number") return sortState.dir === "asc" ? va - vb : vb - va;
+    return sortState.dir === "asc"
+      ? String(va).localeCompare(String(vb))
+      : String(vb).localeCompare(String(va));
+  });
+
+  const thead = columns.map(c => {
+    const arrow = sortState.field === c.field
+      ? (sortState.dir === "asc" ? " &uarr;" : " &darr;")
+      : "";
+    return `<th data-field="${c.field}" class="sortable">${c.label}${arrow}</th>`;
+  }).join("");
+  const tbody = sorted.length === 0
+    ? `<tr><td colspan="${columns.length}">&mdash;</td></tr>`
+    : sorted.map(r => "<tr>" + columns.map(c => `<td>${c.render ? c.render(r) : escapeHtml(r[c.field])}</td>`).join("") + "</tr>").join("");
+
+  const html = `<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+  const container = document.getElementById(containerId);
+  container.innerHTML = html;
+
+  container.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+      const field = th.getAttribute("data-field");
+      if (sortState.field === field) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState.field = field;
+        sortState.dir = "desc";
+      }
+      renderSortableTable(containerId, columns, rows, sortKey, defaultSort);
+    });
+  });
+}
+
 async function showActorDetail(actorId) {
   const params = buildQuery();
   const data = await fetchJSON(`/api/actor/${actorId}?${params.toString()}`);
@@ -301,31 +397,65 @@ async function showActorDetail(actorId) {
   state.openActorId = actorId;
   $("actor-detail-name").textContent = a.name + (a.aliases.length ? ` (${a.aliases.join(", ")})` : "");
 
-  const ttpsRows = (a.all_top_ttps || []).map(t =>
-    `<tr><td><code>${t.id}</code></td><td>${t.name}</td><td>${t.tactic || ""}</td></tr>`
-  ).join("");
-  const victimRows = (a.victims_window || []).map(v =>
-    `<tr><td>${v._date || v.date}</td><td>${v.sector}</td><td>${v.name}</td></tr>`
-  ).join("");
   const fallbackBadge = a.p_sect_source === "baseline_fallback"
     ? ` <span class="badge">baseline fallback</span>`
     : "";
+  const pTtpSource = "fixture value";  // Phase 1 source of P_ttp; Phase 2 will compute from MITRE.
 
   $("actor-detail-body").innerHTML = `
     <div class="kv-grid">
-      <div class="k">Type</div><div>${a.type || "n/a"} &middot; ${a.country || "n/a"}</div>
+      <div class="k">Type</div><div>${escapeHtml(a.type || "n/a")} &middot; ${escapeHtml(a.country || "n/a")}</div>
+      <div class="k">MITRE ATT&amp;CK Group</div><div>${mitreCell(a)}</div>
       <div class="k">Intent (Y)</div><div>${a.y}</div>
       <div class="k">Opportunity (X)</div><div>${a.x}</div>
-      <div class="k">P_sect &middot; P_ttp</div><div>${a.p_sect}${fallbackBadge} &middot; ${a.p_ttp}</div>
-      <div class="k">SecurityScore</div><div>${a.security_score} <small>(${a.security_score_source || "n/a"})</small></div>
+      <div class="k">P_sect</div><div>${fmt2(a.p_sect)} <small>(${pSectSourceLabel(a.p_sect_source)})</small>${fallbackBadge}</div>
+      <div class="k">P_ttp</div><div>${fmt2(a.p_ttp)} <small>(${pTtpSource})</small></div>
+      <div class="k">SecurityScore</div><div>${a.security_score} <small>(${escapeHtml(a.security_score_source || "n/a")})</small></div>
       <div class="k">Victims (window / sector)</div><div>${a.victims_total_window} / ${a.victims_in_sector}</div>
-      <div class="k">Description</div><div>${a.description || ""}</div>
+      <div class="k">Description</div><div>${escapeHtml(a.description || "")}</div>
     </div>
-    <h3>TTPs</h3>
-    <table><thead><tr><th>ID</th><th>Technique</th><th>Tactic</th></tr></thead><tbody>${ttpsRows}</tbody></table>
-    <h3>Victims in window</h3>
-    <table><thead><tr><th>Date</th><th>Sector</th><th>Name</th></tr></thead><tbody>${victimRows || '<tr><td colspan="3">&mdash;</td></tr>'}</tbody></table>
+    <h3>TTPs <small>(click any header to sort)</small></h3>
+    <div id="actor-detail-ttps"></div>
+    <h3>Victims in window <small>(${a.victims_total_window} total, ${a.victims_in_sector} in selected sector)</small></h3>
+    <div id="actor-detail-victims"></div>
   `;
+
+  const ttpsRows = (a.all_top_ttps || []).map(t => ({
+    id: t.id || "",
+    name: t.name || "",
+    tactic: t.tactic || "",
+    shared_with: typeof t.shared_with === "number" ? t.shared_with : 0,
+  }));
+  renderSortableTable(
+    "actor-detail-ttps",
+    [
+      {field: "id",          label: "ID",        render: r => `<code>${escapeHtml(r.id)}</code>`},
+      {field: "name",        label: "Technique"},
+      {field: "tactic",      label: "Tactic"},
+      {field: "shared_with", label: "Shared",    render: r => escapeHtml(sharedLabel(r.shared_with))},
+    ],
+    ttpsRows,
+    `ttps:${actorId}`,
+    {field: "shared_with", dir: "desc"},
+  );
+
+  const victimRows = (a.victims_window || []).map(v => ({
+    date: v._date || v.date,
+    sector: v.sector,
+    name: v.name,
+  }));
+  renderSortableTable(
+    "actor-detail-victims",
+    [
+      {field: "date",   label: "Date"},
+      {field: "sector", label: "Sector"},
+      {field: "name",   label: "Name"},
+    ],
+    victimRows,
+    `victims:${actorId}`,
+    {field: "date", dir: "desc"},
+  );
+
   $("actor-detail").classList.remove("hidden");
 }
 

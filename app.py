@@ -98,6 +98,18 @@ def _list_clients() -> List[dict]:
     return _load_fixture().get("clients", [])
 
 
+def _ttp_usage_map() -> Dict[str, int]:
+    """Map of ttp_id -> number of distinct actors using it (exact-id match,
+    intra-actor dedup). Used to compute the "Shared with N actors" counter
+    in the detail panel (sub-pass C.2 option (beta))."""
+    counts: Dict[str, int] = {}
+    for a in _load_fixture().get("actors", []):
+        ids = {t["id"] for t in a.get("ttps", []) if "id" in t}
+        for ttp_id in ids:
+            counts[ttp_id] = counts.get(ttp_id, 0) + 1
+    return counts
+
+
 # --- Routes --------------------------------------------------------------
 
 @app.route("/")
@@ -140,6 +152,9 @@ def api_config():
         "available_formulas": formulas.list_formulas(),
         "quadrant_threshold_x": config.QUADRANT_THRESHOLD_X,
         "quadrant_threshold_y": config.QUADRANT_THRESHOLD_Y,
+        "marker_size_min": config.MARKER_SIZE_MIN,
+        "marker_size_max": config.MARKER_SIZE_MAX,
+        "marker_size_fallback": config.MARKER_SIZE_FALLBACK,
     })
 
 
@@ -205,11 +220,21 @@ def api_actor_detail(actor_id):
 
     scored = _score_one(actor, sector, since, client_id, sec_override)
     public = _public_score(actor, scored)
+
+    # Augment ttps with the "Shared with N actors" counter (option (beta):
+    # exact-id match, intra-actor dedup, self-excluded).
+    usage = _ttp_usage_map()
+    augmented_ttps = []
+    for t in actor.get("ttps", []):
+        ttp_id = t.get("id")
+        shared_with = max(0, usage.get(ttp_id, 0) - 1) if ttp_id else 0
+        augmented_ttps.append({**t, "shared_with": shared_with})
+
     return jsonify({
         "actor": {
             **public,
             "description": actor.get("description"),
-            "all_top_ttps": actor.get("ttps", []),
+            "all_top_ttps": augmented_ttps,
             "sector_targeting": actor.get("sector_targeting", {}),
             "default_security_score": actor.get("default_security_score"),
             "security_score_overrides_by_client": actor.get("security_score_overrides_by_client", {}),
