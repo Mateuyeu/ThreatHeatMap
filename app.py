@@ -138,6 +138,8 @@ def api_config():
         "time_windows_months": config.TIME_WINDOWS_MONTHS,
         "default_time_window_months": config.DEFAULT_TIME_WINDOW_MONTHS,
         "available_formulas": formulas.list_formulas(),
+        "quadrant_threshold_x": config.QUADRANT_THRESHOLD_X,
+        "quadrant_threshold_y": config.QUADRANT_THRESHOLD_Y,
     })
 
 

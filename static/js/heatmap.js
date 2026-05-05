@@ -115,17 +115,30 @@ async function reload() {
   renderHeatmap(data);
 }
 
-function actorColor(actor) {
-  const palette = {
-    "state-sponsored": "#1d4ed8",
-    "ransomware":      "#b91c1c",
-    "extortion":       "#7c3aed",
-    "cybercrime":      "#c2410c",
-  };
-  return palette[actor.type] || "#0f766e";
+// Type -> color mapping. Source of truth for the enum lives in
+// data/schema/actor_schema.json (actor.type). Keep this map in sync.
+const TYPE_COLORS = {
+  "state-sponsored": "#1d4ed8",  // blue
+  "ransomware":      "#b91c1c",  // red
+  "cybercriminal":   "#c2410c",  // orange
+  "hacktivist":      "#7c3aed",  // violet
+  "unknown":         "#64748b",  // slate
+};
+// Stable display order in the legend.
+const TYPE_ORDER = ["state-sponsored", "ransomware", "cybercriminal", "hacktivist", "unknown"];
+
+function typeColor(type) {
+  return TYPE_COLORS[type] || TYPE_COLORS.unknown;
+}
+
+function typeLabel(type) {
+  if (!type) return "Unknown";
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function actorSize(actor) {
+  // Sizing is encoded on `victims_total_window` (backend field set by
+  // scoring/scorer.py). The C.2 spec calls it "total victims in window".
   const v = actor.victims_total_window || 0;
   return Math.max(10, Math.min(34, 10 + v * 3));
 }
@@ -145,25 +158,82 @@ function hoverText(actor) {
   ].join("<br>");
 }
 
+// Per-actor textposition. Default is 'top center'; flipped to 'bottom center'
+// when nearby earlier actors are already at 'top center'. Vertical-only
+// alternation (sub-pass C.1 spec). Single pass, deterministic order = order
+// in /api/actors. For 3+ clusters we minority-vote to spread the labels.
+const JITTER_THRESHOLD = 8;
+function computeTextPositions(actors) {
+  const positions = new Map();
+  for (let i = 0; i < actors.length; i++) {
+    const a = actors[i];
+    let topNeighbors = 0;
+    let bottomNeighbors = 0;
+    for (let j = 0; j < i; j++) {
+      const b = actors[j];
+      const dx = (a.x ?? 0) - (b.x ?? 0);
+      const dy = (a.y ?? 0) - (b.y ?? 0);
+      if (Math.hypot(dx, dy) < JITTER_THRESHOLD) {
+        const earlier = positions.get(b.id);
+        if (earlier === "bottom center") bottomNeighbors++;
+        else topNeighbors++;
+      }
+    }
+    let pos = "top center";
+    if (topNeighbors === 0 && bottomNeighbors === 0) {
+      pos = "top center";
+    } else if (topNeighbors > bottomNeighbors) {
+      pos = "bottom center";
+    } else {
+      pos = "top center";
+    }
+    positions.set(a.id, pos);
+  }
+  return positions;
+}
+
 function renderHeatmap(data) {
   const actors = data.actors || [];
-  const trace = {
-    type: "scatter",
-    mode: "markers+text",
-    x: actors.map(a => a.x),
-    y: actors.map(a => a.y),
-    text: actors.map(a => a.name),
-    textposition: "top center",
-    textfont: {size: 10, color: "#1f2937"},
-    customdata: actors.map(a => a.id),
-    hovertemplate: actors.map(a => hoverText(a) + "<extra></extra>"),
-    marker: {
-      size: actors.map(actorSize),
-      color: actors.map(actorColor),
-      line: {width: 1, color: "#0f172a"},
-      opacity: 0.85,
-    },
-  };
+  const cfg = state.config || {};
+  const tx = cfg.quadrant_threshold_x ?? 50;
+  const ty = cfg.quadrant_threshold_y ?? 50;
+
+  const textPositions = computeTextPositions(actors);
+
+  // One Plotly trace per actor type -> Plotly renders a clickable legend
+  // that toggles each type's visibility natively. We keep a single X/Y axis
+  // (no subplots); shapes and annotations stay at layout level.
+  const grouped = new Map();
+  for (const a of actors) {
+    const key = TYPE_COLORS[a.type] ? a.type : "unknown";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(a);
+  }
+  const traces = [];
+  for (const type of TYPE_ORDER) {
+    const group = grouped.get(type);
+    if (!group || group.length === 0) continue;
+    traces.push({
+      type: "scatter",
+      mode: "markers+text",
+      name: typeLabel(type),
+      legendgroup: type,
+      x: group.map(a => a.x),
+      y: group.map(a => a.y),
+      text: group.map(a => a.name),
+      textposition: group.map(a => textPositions.get(a.id) || "top center"),
+      textfont: {size: 10, color: "#1f2937"},
+      customdata: group.map(a => a.id),
+      hovertemplate: group.map(a => hoverText(a) + "<extra></extra>"),
+      marker: {
+        size: group.map(actorSize),
+        color: typeColor(type),
+        line: {width: 1, color: "#0f172a"},
+        opacity: 0.85,
+      },
+      cliponaxis: false,
+    });
+  }
 
   const layout = {
     title: {
@@ -173,23 +243,37 @@ function renderHeatmap(data) {
     xaxis: {title: "Opportunity (X)", range: [0, 100], dtick: 10, zeroline: false, gridcolor: "#e2e8f0"},
     yaxis: {title: "Intent (Y)",      range: [0, 100], dtick: 10, zeroline: false, gridcolor: "#e2e8f0"},
     shapes: [
-      {type: "line", x0: 50, x1: 50, y0: 0, y1: 100, line: {color: "#cbd5e1", width: 1, dash: "dot"}},
-      {type: "line", x0: 0, x1: 100, y0: 50, y1: 50, line: {color: "#cbd5e1", width: 1, dash: "dot"}},
+      {type: "line", x0: tx, x1: tx, y0: 0, y1: 100,
+       line: {color: "rgba(153,153,153,0.3)", width: 1, dash: "dot"}},
+      {type: "line", x0: 0, x1: 100, y0: ty, y1: ty,
+       line: {color: "rgba(153,153,153,0.3)", width: 1, dash: "dot"}},
     ],
     annotations: [
-      {x: 75, y: 95, text: "High intent / High opportunity", showarrow: false, font: {color: "#94a3b8", size: 10}},
-      {x: 25, y: 95, text: "High intent / Low opportunity",  showarrow: false, font: {color: "#94a3b8", size: 10}},
-      {x: 75, y: 5,  text: "Low intent / High opportunity",  showarrow: false, font: {color: "#94a3b8", size: 10}},
-      {x: 25, y: 5,  text: "Low intent / Low opportunity",   showarrow: false, font: {color: "#94a3b8", size: 10}},
+      {x: (tx + 100) / 2, y: 96, text: "High intent / High opportunity",
+       showarrow: false, font: {color: "#94a3b8", size: 10}},
+      {x: tx / 2,         y: 96, text: "High intent / Low opportunity",
+       showarrow: false, font: {color: "#94a3b8", size: 10}},
+      {x: (tx + 100) / 2, y: 4,  text: "Low intent / High opportunity",
+       showarrow: false, font: {color: "#94a3b8", size: 10}},
+      {x: tx / 2,         y: 4,  text: "Low intent / Low opportunity",
+       showarrow: false, font: {color: "#94a3b8", size: 10}},
     ],
-    margin: {l: 60, r: 30, t: 50, b: 60},
+    margin: {l: 60, r: 160, t: 50, b: 60},
     plot_bgcolor: "#ffffff",
     paper_bgcolor: "#ffffff",
-    showlegend: false,
+    showlegend: true,
+    legend: {
+      title: {text: "Actor type", font: {size: 11}},
+      x: 1.02, y: 1, xanchor: "left", yanchor: "top",
+      bgcolor: "rgba(255,255,255,0.95)",
+      bordercolor: "#e2e8f0",
+      borderwidth: 1,
+      font: {size: 11},
+    },
     hoverlabel: {bgcolor: "#ffffff", bordercolor: "#cbd5e1", font: {size: 11}},
   };
 
-  Plotly.react("heatmap", [trace], layout, {responsive: true, displaylogo: false});
+  Plotly.react("heatmap", traces, layout, {responsive: true, displaylogo: false});
 
   const gd = $("heatmap");
   gd.removeAllListeners && gd.removeAllListeners("plotly_click");

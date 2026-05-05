@@ -95,3 +95,17 @@ def test_mitre_url_present_when_mitre_id_present(fixture_data):
             assert a.get("mitre_url"), (
                 f"actor[{a['id']}] has mitre_id={a['mitre_id']} but no mitre_url"
             )
+
+
+def test_actor_ttps_have_unique_ids_per_actor(fixture_data):
+    """Required by sub-pass C.1: protects the per-TTP "Shared with N actors"
+    counter (option (β), exact-id matching with intra-actor dedup) from being
+    polluted by accidental duplicate entries in the fixture."""
+    issues = []
+    for a in fixture_data["actors"]:
+        ids = [t["id"] for t in a.get("ttps", [])]
+        if len(ids) != len(set(ids)):
+            seen = set()
+            dupes = [i for i in ids if i in seen or seen.add(i)]
+            issues.append(f"actor[{a['id']}] has duplicate ttp ids: {sorted(set(dupes))}")
+    assert not issues, "\n".join(issues)

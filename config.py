@@ -44,3 +44,7 @@ FLASK_DEBUG = True
 # --- Time windows offered in the UI -------------------------------------
 TIME_WINDOWS_MONTHS = [3, 6, 12]
 DEFAULT_TIME_WINDOW_MONTHS = 6
+
+# --- Heat map visualization -------------------------------------------
+QUADRANT_THRESHOLD_X = 50  # Opportunity (X) split between low/high quadrants
+QUADRANT_THRESHOLD_Y = 50  # Intent (Y) split between low/high quadrants
