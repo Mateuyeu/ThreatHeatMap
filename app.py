@@ -16,6 +16,7 @@ from flask import Flask, abort, jsonify, render_template, request
 
 import config
 from scoring import formulas, normalizer
+from scoring.scorer import compute_score, filter_victims
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 LOGGER = logging.getLogger("threat_heatmap")
@@ -60,7 +61,7 @@ def _parse_int(value: Optional[str], default: int, name: str) -> int:
         abort(400, description=f"Invalid integer for {name!r}: {value!r}.")
 
 
-def _parse_float(value: Optional[str], default: float, name: str) -> float:
+def _parse_float(value: Optional[str], default: Optional[float], name: str) -> Optional[float]:
     if value is None or value == "":
         return default
     try:
@@ -69,58 +70,27 @@ def _parse_float(value: Optional[str], default: float, name: str) -> float:
         abort(400, description=f"Invalid number for {name!r}: {value!r}.")
 
 
-def _filter_victims(actor: dict, since: date, sector_canonical: Optional[str]) -> Tuple[List[dict], List[dict]]:
-    in_window = []
-    for v in actor.get("victims", []):
-        try:
-            vd = datetime.strptime(v["date"], "%Y-%m-%d").date()
-        except (KeyError, ValueError):
-            continue
-        if vd >= since:
-            in_window.append({**v, "_date": vd.isoformat()})
-    in_sector = (
-        [v for v in in_window if v.get("sector") == sector_canonical]
-        if sector_canonical
-        else []
-    )
-    return in_window, in_sector
-
-
-def _resolve_security_score(actor: dict, client_id: str, override: Optional[float]) -> float:
-    if override is not None:
-        return float(override)
-    by_client = actor.get("exposure_score_by_client", {})
-    if client_id in by_client:
-        return float(by_client[client_id])
-    if config.DEFAULT_CLIENT_ID in by_client:
-        return float(by_client[config.DEFAULT_CLIENT_ID])
-    return float(config.DEFAULT_SECURITY_SCORE)
-
-
-def _score_actor(actor: dict, sector_canonical: str, since: date,
-                 client_id: str, security_score_override: Optional[float]) -> dict:
-    in_window, in_sector = _filter_victims(actor, since, sector_canonical)
-    p_sect = (len(in_sector) / len(in_window)) if in_window else 0.0
-    p_ttp = float(actor.get("sector_ttp_affinity", {}).get(sector_canonical, 0.0))
-    sec_score = _resolve_security_score(actor, client_id, security_score_override)
-
-    y = formulas.compute_intent(p_sect, p_ttp, formula_id=config.ACTIVE_FORMULA)
-    x = formulas.compute_opportunity(sec_score, p_ttp, formula_id=config.ACTIVE_FORMULA)
-
+def _public_score(actor: dict, scored: dict) -> dict:
+    """Render compute_score() output for API consumers (drop verbose fields)."""
     return {
         "id": actor["id"],
         "name": actor["name"],
         "aliases": actor.get("aliases", []),
         "type": actor.get("type"),
         "country": actor.get("country"),
-        "x": round(x, 2),
-        "y": round(y, 2),
-        "p_sect": round(p_sect, 4),
-        "p_ttp": round(p_ttp, 4),
-        "security_score": round(sec_score, 2),
-        "victims_total_window": len(in_window),
-        "victims_in_sector": len(in_sector),
-        "top_ttps": actor.get("top_ttps", [])[:3],
+        "mitre_id": actor.get("mitre_id"),
+        "mitre_url": actor.get("mitre_url"),
+        "x": scored["x"],
+        "y": scored["y"],
+        "p_sect": scored["p_sect"],
+        "p_ttp": scored["p_ttp"],
+        "security_score": scored["security_score"],
+        "p_sect_source": scored["p_sect_source"],
+        "security_score_source": scored["security_score_source"],
+        "victims_total_window": scored["victims_total_window"],
+        "victims_in_sector": scored["victims_in_sector"],
+        "victims_total_all_time": len(actor.get("victims", [])),
+        "top_ttps": actor.get("ttps", [])[:3],
     }
 
 
@@ -157,8 +127,10 @@ def api_clients():
 
 @app.route("/api/config")
 def api_config():
+    meta = formulas.formula_meta(config.ACTIVE_FORMULA)
     return jsonify({
         "active_formula": config.ACTIVE_FORMULA,
+        "active_formula_meta": meta,
         "active_victims_adapter": config.ACTIVE_VICTIMS_ADAPTER,
         "ransomware_live_usage": config.RANSOMWARE_LIVE_USAGE,
         "default_security_score": config.DEFAULT_SECURITY_SCORE,
@@ -181,28 +153,43 @@ def _common_query_params():
     since = _parse_since(request.args.get("since"), window_months)
 
     client_id = request.args.get("client") or config.DEFAULT_CLIENT_ID
-    sec_score_arg = request.args.get("security_score")
-    sec_override = _parse_float(sec_score_arg, None, "security_score") if sec_score_arg else None
+    sec_override = _parse_float(request.args.get("security_score"), None, "security_score")
 
     return sector_canonical, since, window_months, client_id, sec_override
+
+
+def _score_one(actor: dict, sector: str, since: date, client_id: str,
+               sec_override: Optional[float]) -> dict:
+    return compute_score(
+        actor=actor,
+        sector=sector,
+        since=since,
+        client_id=client_id,
+        security_score_override=sec_override,
+        default_security_score=config.DEFAULT_SECURITY_SCORE,
+        formula_id=config.ACTIVE_FORMULA,
+    )
 
 
 @app.route("/api/actors")
 def api_actors():
     sector, since, window_months, client_id, sec_override = _common_query_params()
     fixture = _load_fixture()
-    scored = [
-        _score_actor(a, sector, since, client_id, sec_override)
-        for a in fixture.get("actors", [])
-    ]
+    public = []
+    for a in fixture.get("actors", []):
+        scored = _score_one(a, sector, since, client_id, sec_override)
+        public.append(_public_score(a, scored))
     return jsonify({
         "sector": sector,
         "since": since.isoformat(),
+        "until": date.today().isoformat(),
         "window_months": window_months,
         "client": client_id,
         "security_score_override": sec_override,
         "formula": config.ACTIVE_FORMULA,
-        "actors": scored,
+        "formula_meta": formulas.formula_meta(config.ACTIVE_FORMULA),
+        "extracted_at": datetime.utcnow().isoformat() + "Z",
+        "actors": public,
     })
 
 
@@ -214,24 +201,26 @@ def api_actor_detail(actor_id):
     if actor is None:
         abort(404, description=f"Unknown actor id {actor_id!r}.")
 
-    in_window, in_sector = _filter_victims(actor, since, sector)
-    scored = _score_actor(actor, sector, since, client_id, sec_override)
+    scored = _score_one(actor, sector, since, client_id, sec_override)
+    public = _public_score(actor, scored)
     return jsonify({
         "actor": {
-            **scored,
+            **public,
             "description": actor.get("description"),
-            "aliases": actor.get("aliases", []),
-            "all_top_ttps": actor.get("top_ttps", []),
-            "sector_ttp_affinity": actor.get("sector_ttp_affinity", {}),
-            "exposure_score_by_client": actor.get("exposure_score_by_client", {}),
-            "victims_window": in_window,
-            "victims_sector": in_sector,
+            "all_top_ttps": actor.get("ttps", []),
+            "sector_targeting": actor.get("sector_targeting", {}),
+            "default_security_score": actor.get("default_security_score"),
+            "security_score_overrides_by_client": actor.get("security_score_overrides_by_client", {}),
+            "victims_window": scored["victims_window"],
+            "victims_sector": scored["victims_sector"],
         },
         "sector": sector,
         "since": since.isoformat(),
+        "until": date.today().isoformat(),
         "window_months": window_months,
         "client": client_id,
         "formula": config.ACTIVE_FORMULA,
+        "formula_meta": formulas.formula_meta(config.ACTIVE_FORMULA),
     })
 
 
@@ -252,46 +241,42 @@ def api_export():
     if fmt not in {"json", "png", "svg"}:
         abort(400, description="format must be one of: json, png, svg.")
     if fmt in {"png", "svg"}:
-        # Image rendering is performed client-side via Plotly.downloadImage.
         return jsonify({
             "status": "client_side",
             "format": fmt,
-            "message": f"PNG and SVG exports are produced client-side via Plotly.downloadImage. Trigger from the UI's Export menu.",
+            "message": "PNG and SVG exports are produced client-side via Plotly.downloadImage. Trigger from the UI's Export menu.",
         }), 200
 
     sector, since, window_months, client_id, sec_override = _common_query_params()
     fixture = _load_fixture()
-    scored = [
-        _score_actor(a, sector, since, client_id, sec_override)
-        for a in fixture.get("actors", [])
-    ]
+    payload_actors = []
+    for a in fixture.get("actors", []):
+        scored = _score_one(a, sector, since, client_id, sec_override)
+        payload_actors.append({
+            **_public_score(a, scored),
+            "description": a.get("description"),
+            "all_top_ttps": a.get("ttps", []),
+            "sector_targeting": a.get("sector_targeting", {}),
+            "victims_window": scored["victims_window"],
+            "victims_sector": scored["victims_sector"],
+        })
     payload = {
         "metadata": {
             "exported_at": datetime.utcnow().isoformat() + "Z",
             "sector": sector,
             "since": since.isoformat(),
+            "until": date.today().isoformat(),
             "window_months": window_months,
             "client": client_id,
             "security_score_override": sec_override,
             "formula": config.ACTIVE_FORMULA,
+            "formula_meta": formulas.formula_meta(config.ACTIVE_FORMULA),
             "active_victims_adapter": config.ACTIVE_VICTIMS_ADAPTER,
             "ransomware_live_usage": config.RANSOMWARE_LIVE_USAGE,
             "fixture_version": fixture.get("metadata", {}).get("version"),
         },
-        "actors": [],
+        "actors": payload_actors,
     }
-    for a in fixture.get("actors", []):
-        in_window, in_sector = _filter_victims(a, since, sector)
-        scored_one = next((s for s in scored if s["id"] == a["id"]), None)
-        payload["actors"].append({
-            **(scored_one or {}),
-            "description": a.get("description"),
-            "all_top_ttps": a.get("top_ttps", []),
-            "sector_ttp_affinity": a.get("sector_ttp_affinity", {}),
-            "victims_window": in_window,
-            "victims_sector": in_sector,
-        })
-    # Attribution clauses for any data sources requiring them.
     attributions = []
     if config.ACTIVE_VICTIMS_ADAPTER == "ransomware_live" and config.RANSOMWARE_LIVE_USAGE != "disabled":
         from connectors.ransomware_live import ATTRIBUTION_TEXT
@@ -317,10 +302,8 @@ def _not_found(err):
 # --- Bootstrap ----------------------------------------------------------
 
 def _emit_license_notices():
-    """Emit license banners for adapters that demand them."""
     if config.ACTIVE_VICTIMS_ADAPTER == "ransomware_live":
         from connectors.ransomware_live import RansomwareLiveAdapter
-        # Instantiating the adapter prints the banner and validates the flag.
         RansomwareLiveAdapter(usage_flag=config.RANSOMWARE_LIVE_USAGE)
 
 

@@ -5,6 +5,7 @@ const state = {
   clients: [],
   config: null,
   lastResponse: null,
+  openActorId: null,
 };
 
 function $(id) { return document.getElementById(id); }
@@ -48,10 +49,17 @@ async function bootstrap() {
   const clientSel = $("client");
   state.clients.forEach(c => clientSel.appendChild(buildOption(c.id, c.name, c.id === cfg.default_client_id)));
 
+  const meta = cfg.active_formula_meta || {};
+  const floor = meta.floor_epsilon;
+  const formulaText =
+    floor != null
+      ? `Y = sqrt(max(P_sect, ${floor}) &times; max(P_ttp, ${floor})) &times; 100, X = SecurityScore &times; P_ttp`
+      : `Y = sqrt(P_sect &times; P_ttp) &times; 100, X = SecurityScore &times; P_ttp`;
   $("formula-banner").innerHTML =
     `Active formula: <code>${cfg.active_formula}</code> &middot; ` +
     `Available: ${cfg.available_formulas.map(f => `<code>${f}</code>`).join(", ")} &middot; ` +
-    `Y = sqrt(P_sect &times; P_ttp) &times; 100, X = SecurityScore &times; P_ttp`;
+    formulaText +
+    (floor != null ? ` &middot; <em>floor &epsilon; = ${floor} on each probability</em>` : "");
   $("data-banner").innerHTML =
     `Active victims adapter: <code>${cfg.active_victims_adapter}</code> &middot; ` +
     `ransomware.live usage flag: <code>${cfg.ransomware_live_usage}</code> &middot; ` +
@@ -63,16 +71,31 @@ async function bootstrap() {
 
 function attachHandlers() {
   ["sector", "window", "client", "security_score"].forEach(id => {
-    $(id).addEventListener("change", reload);
+    $(id).addEventListener("change", onFilterChange);
   });
   $("refresh").addEventListener("click", async () => {
     await fetchJSON("/api/refresh", {method: "POST"});
-    await reload();
+    await onFilterChange();
   });
   $("export-png").addEventListener("click", () => exportImage("png"));
   $("export-svg").addEventListener("click", () => exportImage("svg"));
   $("export-json").addEventListener("click", exportJSON);
-  $("actor-detail-close").addEventListener("click", () => $("actor-detail").classList.add("hidden"));
+  $("actor-detail-close").addEventListener("click", closeActorDetail);
+}
+
+async function onFilterChange() {
+  // Any filter change invalidates the open detail panel: re-fetch it from
+  // the same endpoint as the heat map so scatter and panel stay coherent.
+  const previouslyOpen = state.openActorId;
+  await reload();
+  if (previouslyOpen) {
+    await showActorDetail(previouslyOpen);
+  }
+}
+
+function closeActorDetail() {
+  state.openActorId = null;
+  $("actor-detail").classList.add("hidden");
 }
 
 function buildQuery() {
@@ -182,6 +205,7 @@ async function showActorDetail(actorId) {
   const params = buildQuery();
   const data = await fetchJSON(`/api/actor/${actorId}?${params.toString()}`);
   const a = data.actor;
+  state.openActorId = actorId;
   $("actor-detail-name").textContent = a.name + (a.aliases.length ? ` (${a.aliases.join(", ")})` : "");
 
   const ttpsRows = (a.all_top_ttps || []).map(t =>
@@ -190,14 +214,17 @@ async function showActorDetail(actorId) {
   const victimRows = (a.victims_window || []).map(v =>
     `<tr><td>${v._date || v.date}</td><td>${v.sector}</td><td>${v.name}</td></tr>`
   ).join("");
+  const fallbackBadge = a.p_sect_source === "baseline_fallback"
+    ? ` <span class="badge">baseline fallback</span>`
+    : "";
 
   $("actor-detail-body").innerHTML = `
     <div class="kv-grid">
       <div class="k">Type</div><div>${a.type || "n/a"} &middot; ${a.country || "n/a"}</div>
       <div class="k">Intent (Y)</div><div>${a.y}</div>
       <div class="k">Opportunity (X)</div><div>${a.x}</div>
-      <div class="k">P_sect &middot; P_ttp</div><div>${a.p_sect} &middot; ${a.p_ttp}</div>
-      <div class="k">SecurityScore</div><div>${a.security_score}</div>
+      <div class="k">P_sect &middot; P_ttp</div><div>${a.p_sect}${fallbackBadge} &middot; ${a.p_ttp}</div>
+      <div class="k">SecurityScore</div><div>${a.security_score} <small>(${a.security_score_source || "n/a"})</small></div>
       <div class="k">Victims (window / sector)</div><div>${a.victims_total_window} / ${a.victims_in_sector}</div>
       <div class="k">Description</div><div>${a.description || ""}</div>
     </div>

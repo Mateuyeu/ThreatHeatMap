@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "generated": "2026-05-04",
-    "description": "Phase 1 synthetic fixture. 10 named threat actors with real ATT&CK technique IDs and simulated victim records. Sectors are normalized to data/sectors.json (NIS2 nomenclature).",
-    "warning": "Victim records are SIMULATED for technical validation. Names are fictitious and must not be used as ground truth."
+    "description": "Phase 1 synthetic fixture (patch v1.1). Schema aligned with the JSON Schema target of sub-pass B: sector_targeting carries both a P_sect baseline (fallback when no victims in window) and a P_ttp coefficient. SecurityScore is split between a per-actor default and per-client overrides.",
+    "warning": "Victim records are SIMULATED for technical validation. Names are fictitious; sector and date distributions follow the per-actor rationale documented in RATIONALE.md."
   },
   "clients": [
     {
@@ -25,325 +25,401 @@
   "actors": [
     {
       "id": "lazarus",
+      "mitre_id": "G0032",
+      "mitre_url": "https://attack.mitre.org/groups/G0032/",
       "name": "Lazarus Group",
       "aliases": ["Hidden Cobra", "APT38", "Guardians of Peace", "ZINC", "Diamond Sleet"],
       "country": "DPRK",
       "type": "state-sponsored",
       "description": "DPRK-aligned threat actor with a strong financial-gain mandate. Notorious for SWIFT heists, cryptocurrency theft and destructive operations.",
-      "top_ttps": [
+      "ttps": [
         {"id": "T1566.001", "name": "Spearphishing Attachment", "tactic": "Initial Access"},
         {"id": "T1059.003", "name": "Windows Command Shell", "tactic": "Execution"},
         {"id": "T1486", "name": "Data Encrypted for Impact", "tactic": "Impact"},
         {"id": "T1027", "name": "Obfuscated Files or Information", "tactic": "Defense Evasion"},
         {"id": "T1071.001", "name": "Web Protocols", "tactic": "Command and Control"}
       ],
-      "sector_ttp_affinity": {
-        "Banking": 0.90,
-        "Financial Market Infrastructure": 0.85,
-        "Digital Providers": 0.55,
-        "Digital Infrastructure": 0.45,
-        "Telecommunications": 0.40,
-        "ICT Service Management": 0.40,
-        "Research": 0.30,
-        "Healthcare": 0.25,
-        "Submarine Cable Operators": 0.20
+      "sector_targeting": {
+        "Banking":                          {"p_sect": 0.40, "p_ttp": 0.90},
+        "Financial Market Infrastructure":  {"p_sect": 0.20, "p_ttp": 0.85},
+        "Digital Providers":                {"p_sect": 0.10, "p_ttp": 0.55},
+        "Telecommunications":               {"p_sect": 0.10, "p_ttp": 0.40},
+        "Digital Infrastructure":           {"p_sect": 0.05, "p_ttp": 0.45},
+        "ICT Service Management":           {"p_sect": 0.05, "p_ttp": 0.40},
+        "Research":                         {"p_sect": 0.03, "p_ttp": 0.30},
+        "Healthcare":                       {"p_sect": 0.03, "p_ttp": 0.25},
+        "Submarine Cable Operators":        {"p_sect": 0.02, "p_ttp": 0.20}
       },
-      "exposure_score_by_client": {"default": 70, "telecom_eu": 55, "submarine_cable_op": 50},
+      "default_security_score": 70,
+      "security_score_overrides_by_client": {"telecom_eu": 55, "submarine_cable_op": 50},
       "victims": [
-        {"name": "Asia Pacific Bank A", "sector": "Banking", "date": "2025-08-12"},
-        {"name": "Trading Venue B", "sector": "Financial Market Infrastructure", "date": "2025-10-05"},
-        {"name": "Regional Bank C", "sector": "Banking", "date": "2025-12-18"},
-        {"name": "MVNO Operator D", "sector": "Telecommunications", "date": "2026-02-22"},
-        {"name": "Crypto Exchange E", "sector": "Banking", "date": "2026-03-10"}
+        {"name": "Asia Pacific Bank A",  "sector": "Banking",                         "date": "2024-08-15"},
+        {"name": "Trading Venue B",      "sector": "Financial Market Infrastructure", "date": "2024-12-10"},
+        {"name": "Regional Bank C",      "sector": "Banking",                         "date": "2025-04-22"},
+        {"name": "Crypto Exchange D",    "sector": "Banking",                         "date": "2025-09-18"},
+        {"name": "Mid-Tier Bank E",      "sector": "Banking",                         "date": "2025-12-05"},
+        {"name": "MVNO Operator F",      "sector": "Telecommunications",              "date": "2026-02-22"},
+        {"name": "Settlement System G",  "sector": "Financial Market Infrastructure", "date": "2026-04-10"}
       ]
     },
     {
       "id": "apt28",
+      "mitre_id": "G0007",
+      "mitre_url": "https://attack.mitre.org/groups/G0007/",
       "name": "APT28",
       "aliases": ["Fancy Bear", "Sofacy", "STRONTIUM", "Forest Blizzard", "Pawn Storm"],
       "country": "Russia",
       "type": "state-sponsored",
       "description": "Russian GRU-attributed espionage actor focused on government, defense and critical infrastructure across NATO and EU member states.",
-      "top_ttps": [
+      "ttps": [
         {"id": "T1566.002", "name": "Spearphishing Link", "tactic": "Initial Access"},
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"},
         {"id": "T1003.001", "name": "LSASS Memory", "tactic": "Credential Access"},
         {"id": "T1190", "name": "Exploit Public-Facing Application", "tactic": "Initial Access"},
         {"id": "T1071.001", "name": "Web Protocols", "tactic": "Command and Control"}
       ],
-      "sector_ttp_affinity": {
-        "Public Administration": 0.90,
-        "Research": 0.70,
-        "Energy": 0.65,
-        "Telecommunications": 0.55,
-        "Submarine Cable Operators": 0.50,
-        "ICT Service Management": 0.45,
-        "Digital Infrastructure": 0.40,
-        "Maritime Transport": 0.35,
-        "Space": 0.45
+      "sector_targeting": {
+        "Public Administration":     {"p_sect": 0.40, "p_ttp": 0.90},
+        "Research":                  {"p_sect": 0.15, "p_ttp": 0.70},
+        "Energy":                    {"p_sect": 0.15, "p_ttp": 0.65},
+        "Telecommunications":        {"p_sect": 0.10, "p_ttp": 0.55},
+        "Submarine Cable Operators": {"p_sect": 0.05, "p_ttp": 0.50},
+        "ICT Service Management":    {"p_sect": 0.05, "p_ttp": 0.45},
+        "Digital Infrastructure":    {"p_sect": 0.04, "p_ttp": 0.40},
+        "Maritime Transport":        {"p_sect": 0.03, "p_ttp": 0.35},
+        "Space":                     {"p_sect": 0.03, "p_ttp": 0.45}
       },
-      "exposure_score_by_client": {"default": 65, "telecom_eu": 70, "submarine_cable_op": 72},
+      "default_security_score": 65,
+      "security_score_overrides_by_client": {"telecom_eu": 70, "submarine_cable_op": 72},
       "victims": [
-        {"name": "Ministry of Defence F", "sector": "Public Administration", "date": "2025-06-15"},
-        {"name": "Power Utility G", "sector": "Energy", "date": "2025-09-20"},
-        {"name": "Research Institute H", "sector": "Research", "date": "2025-11-30"},
-        {"name": "Federal Agency I", "sector": "Public Administration", "date": "2026-01-25"},
-        {"name": "Telecom Operator J", "sector": "Telecommunications", "date": "2026-04-10"}
+        {"name": "Ministry of Defence H",   "sector": "Public Administration",   "date": "2024-09-05"},
+        {"name": "Defense Research Lab I",  "sector": "Research",                "date": "2025-02-10"},
+        {"name": "Power Utility J",         "sector": "Energy",                  "date": "2025-06-22"},
+        {"name": "Federal Agency K",        "sector": "Public Administration",   "date": "2025-09-18"},
+        {"name": "Telecom Operator L",      "sector": "Telecommunications",      "date": "2025-12-15"},
+        {"name": "Diplomatic Mission M",    "sector": "Public Administration",   "date": "2026-02-25"},
+        {"name": "Grid Operator N",         "sector": "Energy",                  "date": "2026-04-15"}
       ]
     },
     {
       "id": "apt41",
+      "mitre_id": "G0096",
+      "mitre_url": "https://attack.mitre.org/groups/G0096/",
       "name": "APT41",
       "aliases": ["Wicked Panda", "BARIUM", "Brass Typhoon", "Winnti"],
       "country": "China",
       "type": "state-sponsored",
       "description": "Chinese dual-purpose actor mixing state-aligned espionage with financially motivated operations. Heavy reliance on supply-chain compromises and edge-device exploits.",
-      "top_ttps": [
+      "ttps": [
         {"id": "T1190", "name": "Exploit Public-Facing Application", "tactic": "Initial Access"},
         {"id": "T1505.003", "name": "Web Shell", "tactic": "Persistence"},
         {"id": "T1059.001", "name": "PowerShell", "tactic": "Execution"},
         {"id": "T1133", "name": "External Remote Services", "tactic": "Initial Access"},
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"}
       ],
-      "sector_ttp_affinity": {
-        "Healthcare": 0.80,
-        "Telecommunications": 0.85,
-        "Submarine Cable Operators": 0.65,
-        "Manufacturing": 0.60,
-        "Digital Infrastructure": 0.65,
-        "ICT Service Management": 0.55,
-        "Research": 0.50,
-        "Digital Providers": 0.40
+      "sector_targeting": {
+        "Healthcare":                {"p_sect": 0.20, "p_ttp": 0.80},
+        "Telecommunications":        {"p_sect": 0.20, "p_ttp": 0.85},
+        "Manufacturing":             {"p_sect": 0.15, "p_ttp": 0.60},
+        "Banking":                   {"p_sect": 0.10, "p_ttp": 0.60},
+        "Submarine Cable Operators": {"p_sect": 0.10, "p_ttp": 0.65},
+        "Digital Infrastructure":    {"p_sect": 0.10, "p_ttp": 0.65},
+        "ICT Service Management":    {"p_sect": 0.05, "p_ttp": 0.55},
+        "Research":                  {"p_sect": 0.05, "p_ttp": 0.50},
+        "Digital Providers":         {"p_sect": 0.03, "p_ttp": 0.40},
+        "Energy":                    {"p_sect": 0.02, "p_ttp": 0.45}
       },
-      "exposure_score_by_client": {"default": 72, "telecom_eu": 80, "submarine_cable_op": 70},
+      "default_security_score": 72,
+      "security_score_overrides_by_client": {"telecom_eu": 80, "submarine_cable_op": 70},
       "victims": [
-        {"name": "Hospital Network K", "sector": "Healthcare", "date": "2025-07-08"},
-        {"name": "Mobile Operator L", "sector": "Telecommunications", "date": "2025-10-22"},
-        {"name": "Industrial Manufacturer M", "sector": "Manufacturing", "date": "2026-01-15"},
-        {"name": "Pharma Group N", "sector": "Healthcare", "date": "2026-03-28"}
+        {"name": "Industrial Manufacturer O", "sector": "Manufacturing",     "date": "2024-08-12"},
+        {"name": "Telecom Carrier P",         "sector": "Telecommunications","date": "2024-11-25"},
+        {"name": "Hospital Group Q",          "sector": "Healthcare",        "date": "2025-04-22"},
+        {"name": "Mobile Operator R",         "sector": "Telecommunications","date": "2025-08-15"},
+        {"name": "Aerospace Supplier S",      "sector": "Manufacturing",     "date": "2025-12-08"},
+        {"name": "Mobile Operator T",         "sector": "Telecommunications","date": "2026-01-18"},
+        {"name": "Pharma Group U",            "sector": "Healthcare",        "date": "2026-03-15"},
+        {"name": "Asian Bank V",              "sector": "Banking",           "date": "2026-04-22"}
       ]
     },
     {
       "id": "apt29",
+      "mitre_id": "G0016",
+      "mitre_url": "https://attack.mitre.org/groups/G0016/",
       "name": "APT29",
       "aliases": ["Cozy Bear", "Midnight Blizzard", "NOBELIUM", "The Dukes"],
       "country": "Russia",
       "type": "state-sponsored",
       "description": "Russian SVR-attributed espionage actor. Stealthy long-term access, identity-centric tradecraft and abuse of cloud/SaaS environments.",
-      "top_ttps": [
+      "ttps": [
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"},
         {"id": "T1098", "name": "Account Manipulation", "tactic": "Persistence"},
         {"id": "T1059.001", "name": "PowerShell", "tactic": "Execution"},
         {"id": "T1550.001", "name": "Application Access Token", "tactic": "Lateral Movement"},
         {"id": "T1556.006", "name": "Multi-Factor Authentication", "tactic": "Credential Access"}
       ],
-      "sector_ttp_affinity": {
-        "Public Administration": 0.85,
-        "Research": 0.70,
-        "ICT Service Management": 0.65,
-        "Digital Infrastructure": 0.55,
-        "Telecommunications": 0.40,
-        "Healthcare": 0.45,
-        "Submarine Cable Operators": 0.30
+      "sector_targeting": {
+        "Public Administration":     {"p_sect": 0.35, "p_ttp": 0.85},
+        "Research":                  {"p_sect": 0.20, "p_ttp": 0.70},
+        "ICT Service Management":    {"p_sect": 0.15, "p_ttp": 0.65},
+        "Digital Infrastructure":    {"p_sect": 0.10, "p_ttp": 0.55},
+        "Telecommunications":        {"p_sect": 0.08, "p_ttp": 0.40},
+        "Healthcare":                {"p_sect": 0.05, "p_ttp": 0.45},
+        "Energy":                    {"p_sect": 0.04, "p_ttp": 0.40},
+        "Submarine Cable Operators": {"p_sect": 0.03, "p_ttp": 0.30}
       },
-      "exposure_score_by_client": {"default": 68, "telecom_eu": 60, "submarine_cable_op": 55},
+      "default_security_score": 68,
+      "security_score_overrides_by_client": {"telecom_eu": 60, "submarine_cable_op": 55},
       "victims": [
-        {"name": "Foreign Affairs Ministry O", "sector": "Public Administration", "date": "2025-05-30"},
-        {"name": "Defense Research Lab P", "sector": "Research", "date": "2025-12-05"},
-        {"name": "MSP Provider Q", "sector": "ICT Service Management", "date": "2026-02-18"}
+        {"name": "Foreign Affairs Ministry W", "sector": "Public Administration",   "date": "2024-10-20"},
+        {"name": "Vaccine Research Lab X",     "sector": "Research",                "date": "2025-03-15"},
+        {"name": "MSP Provider Y",             "sector": "ICT Service Management",  "date": "2025-08-10"},
+        {"name": "Telco Cloud Tenant Z",       "sector": "Telecommunications",      "date": "2025-12-22"},
+        {"name": "Federal Department AA",      "sector": "Public Administration",   "date": "2026-02-28"},
+        {"name": "National Grid Office BB",    "sector": "Energy",                  "date": "2026-04-08"}
       ]
     },
     {
       "id": "sandworm",
+      "mitre_id": "G0034",
+      "mitre_url": "https://attack.mitre.org/groups/G0034/",
       "name": "Sandworm Team",
       "aliases": ["BlackEnergy Group", "Voodoo Bear", "Seashell Blizzard", "IRON VIKING"],
       "country": "Russia",
       "type": "state-sponsored",
       "description": "Russian GRU Unit 74455. Destructive operations against critical infrastructure: power grids, telecom, water, public services.",
-      "top_ttps": [
+      "ttps": [
         {"id": "T1486", "name": "Data Encrypted for Impact", "tactic": "Impact"},
         {"id": "T1561.002", "name": "Disk Structure Wipe", "tactic": "Impact"},
         {"id": "T1490", "name": "Inhibit System Recovery", "tactic": "Impact"},
         {"id": "T1499", "name": "Endpoint Denial of Service", "tactic": "Impact"},
         {"id": "T1190", "name": "Exploit Public-Facing Application", "tactic": "Initial Access"}
       ],
-      "sector_ttp_affinity": {
-        "Energy": 0.90,
-        "Telecommunications": 0.80,
-        "Submarine Cable Operators": 0.70,
-        "Drinking Water": 0.65,
-        "Wastewater": 0.55,
-        "Public Administration": 0.55,
-        "Maritime Transport": 0.45,
-        "Digital Infrastructure": 0.45
+      "sector_targeting": {
+        "Energy":                    {"p_sect": 0.35, "p_ttp": 0.90},
+        "Telecommunications":        {"p_sect": 0.20, "p_ttp": 0.80},
+        "Submarine Cable Operators": {"p_sect": 0.10, "p_ttp": 0.70},
+        "Drinking Water":            {"p_sect": 0.10, "p_ttp": 0.65},
+        "Public Administration":     {"p_sect": 0.10, "p_ttp": 0.55},
+        "Manufacturing":             {"p_sect": 0.05, "p_ttp": 0.50},
+        "Wastewater":                {"p_sect": 0.05, "p_ttp": 0.55},
+        "Maritime Transport":        {"p_sect": 0.03, "p_ttp": 0.45},
+        "Digital Infrastructure":    {"p_sect": 0.02, "p_ttp": 0.45}
       },
-      "exposure_score_by_client": {"default": 60, "telecom_eu": 82, "submarine_cable_op": 85},
+      "default_security_score": 60,
+      "security_score_overrides_by_client": {"telecom_eu": 82, "submarine_cable_op": 85},
       "victims": [
-        {"name": "Regional Power Grid R", "sector": "Energy", "date": "2025-09-10"},
-        {"name": "National Telecom Backbone S", "sector": "Telecommunications", "date": "2025-11-22"},
-        {"name": "Water Utility T", "sector": "Drinking Water", "date": "2026-01-08"},
-        {"name": "Energy Distributor U", "sector": "Energy", "date": "2026-04-01"}
+        {"name": "Regional Power Grid CC",    "sector": "Energy",                    "date": "2024-09-08"},
+        {"name": "National Telco Backbone DD","sector": "Telecommunications",        "date": "2024-11-12"},
+        {"name": "Water Utility EE",          "sector": "Drinking Water",            "date": "2025-03-25"},
+        {"name": "Energy Distributor FF",     "sector": "Energy",                    "date": "2025-08-30"},
+        {"name": "Substation Operator GG",    "sector": "Energy",                    "date": "2025-12-12"},
+        {"name": "Telecom ISP HH",            "sector": "Telecommunications",        "date": "2026-02-18"},
+        {"name": "Municipal Office II",       "sector": "Public Administration",     "date": "2026-03-20"},
+        {"name": "Cable Landing Station JJ",  "sector": "Submarine Cable Operators", "date": "2026-04-25"},
+        {"name": "Aerospace Supplier KK",     "sector": "Manufacturing",             "date": "2026-04-30"}
       ]
     },
     {
       "id": "fin7",
+      "mitre_id": "G0046",
+      "mitre_url": "https://attack.mitre.org/groups/G0046/",
       "name": "FIN7",
       "aliases": ["Carbanak", "Carbon Spider", "Sangria Tempest"],
       "country": "Russia (criminal)",
-      "type": "cybercrime",
-      "description": "Financially motivated criminal group. Originally point-of-sale focused, now diversified into ransomware affiliations and supply-chain attacks.",
-      "top_ttps": [
+      "type": "cybercriminal",
+      "description": "Financially motivated criminal group. Originally point-of-sale focused, now diversified into ransomware affiliations and supply-chain attacks against retail, hospitality, manufacturing and healthcare.",
+      "ttps": [
         {"id": "T1566.001", "name": "Spearphishing Attachment", "tactic": "Initial Access"},
         {"id": "T1204.002", "name": "Malicious File", "tactic": "Execution"},
         {"id": "T1059.005", "name": "Visual Basic", "tactic": "Execution"},
         {"id": "T1027", "name": "Obfuscated Files or Information", "tactic": "Defense Evasion"},
         {"id": "T1546.011", "name": "Application Shimming", "tactic": "Persistence"}
       ],
-      "sector_ttp_affinity": {
-        "Digital Providers": 0.80,
-        "Food": 0.55,
-        "Healthcare": 0.50,
-        "Banking": 0.55,
-        "Manufacturing": 0.40,
-        "Telecommunications": 0.30,
-        "Submarine Cable Operators": 0.10
+      "sector_targeting": {
+        "Digital Providers":               {"p_sect": 0.30, "p_ttp": 0.80},
+        "Banking":                         {"p_sect": 0.20, "p_ttp": 0.55},
+        "Food":                            {"p_sect": 0.15, "p_ttp": 0.55},
+        "Manufacturing":                   {"p_sect": 0.10, "p_ttp": 0.40},
+        "Healthcare":                      {"p_sect": 0.10, "p_ttp": 0.50},
+        "Financial Market Infrastructure": {"p_sect": 0.05, "p_ttp": 0.50},
+        "Telecommunications":              {"p_sect": 0.03, "p_ttp": 0.30},
+        "Submarine Cable Operators":       {"p_sect": 0.01, "p_ttp": 0.10}
       },
-      "exposure_score_by_client": {"default": 55, "telecom_eu": 35, "submarine_cable_op": 30},
+      "default_security_score": 55,
+      "security_score_overrides_by_client": {"telecom_eu": 35, "submarine_cable_op": 30},
       "victims": [
-        {"name": "E-commerce Platform V", "sector": "Digital Providers", "date": "2025-07-25"},
-        {"name": "Food Retailer W", "sector": "Food", "date": "2025-10-14"},
-        {"name": "Online Marketplace X", "sector": "Digital Providers", "date": "2025-12-30"},
-        {"name": "Travel Booking Site Y", "sector": "Digital Providers", "date": "2026-03-19"}
+        {"name": "E-commerce Platform LL",   "sector": "Digital Providers", "date": "2024-08-25"},
+        {"name": "Restaurant Chain MM",      "sector": "Food",              "date": "2024-11-30"},
+        {"name": "Mid-Tier Bank NN",         "sector": "Banking",           "date": "2025-03-15"},
+        {"name": "Online Marketplace OO",    "sector": "Digital Providers", "date": "2025-07-08"},
+        {"name": "Regional Bank PP",         "sector": "Banking",           "date": "2025-12-04"},
+        {"name": "Hospital POS Vendor QQ",   "sector": "Healthcare",        "date": "2026-01-30"},
+        {"name": "Auto Parts Manufacturer RR","sector": "Manufacturing",    "date": "2026-02-15"},
+        {"name": "Travel Booking Site SS",   "sector": "Digital Providers", "date": "2026-04-02"}
       ]
     },
     {
       "id": "lockbit",
+      "mitre_id": null,
+      "mitre_url": "https://attack.mitre.org/software/S1063/",
       "name": "LockBit (and successors)",
       "aliases": ["LockBit 3.0", "LockBit Black", "LockBit Green", "Bitwise Spider"],
       "country": "Russia (criminal)",
       "type": "ransomware",
-      "description": "Long-running ransomware-as-a-service brand. Highly opportunistic, broad sectoral coverage, frequent affiliate churn after 2024 Operation Cronos disruption.",
-      "top_ttps": [
+      "description": "Long-running ransomware-as-a-service brand. Highly opportunistic, broad sectoral coverage, frequent affiliate churn after the 2024 Operation Cronos disruption.",
+      "ttps": [
         {"id": "T1486", "name": "Data Encrypted for Impact", "tactic": "Impact"},
         {"id": "T1490", "name": "Inhibit System Recovery", "tactic": "Impact"},
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"},
         {"id": "T1021.001", "name": "Remote Desktop Protocol", "tactic": "Lateral Movement"},
         {"id": "T1136.001", "name": "Local Account", "tactic": "Persistence"}
       ],
-      "sector_ttp_affinity": {
-        "Manufacturing": 0.75,
-        "Healthcare": 0.70,
-        "Banking": 0.55,
-        "Financial Market Infrastructure": 0.50,
-        "Public Administration": 0.55,
-        "Telecommunications": 0.45,
-        "Submarine Cable Operators": 0.35,
-        "Energy": 0.50,
-        "Food": 0.45,
-        "Digital Providers": 0.45,
-        "ICT Service Management": 0.50
+      "sector_targeting": {
+        "Manufacturing":                   {"p_sect": 0.20, "p_ttp": 0.75},
+        "Healthcare":                      {"p_sect": 0.15, "p_ttp": 0.70},
+        "Banking":                         {"p_sect": 0.12, "p_ttp": 0.55},
+        "Energy":                          {"p_sect": 0.10, "p_ttp": 0.50},
+        "Public Administration":           {"p_sect": 0.10, "p_ttp": 0.55},
+        "Telecommunications":              {"p_sect": 0.08, "p_ttp": 0.45},
+        "ICT Service Management":          {"p_sect": 0.07, "p_ttp": 0.50},
+        "Financial Market Infrastructure": {"p_sect": 0.05, "p_ttp": 0.50},
+        "Food":                            {"p_sect": 0.05, "p_ttp": 0.45},
+        "Digital Providers":               {"p_sect": 0.04, "p_ttp": 0.45},
+        "Submarine Cable Operators":       {"p_sect": 0.02, "p_ttp": 0.35}
       },
-      "exposure_score_by_client": {"default": 78, "telecom_eu": 65, "submarine_cable_op": 60},
+      "default_security_score": 78,
+      "security_score_overrides_by_client": {"telecom_eu": 65, "submarine_cable_op": 60},
       "victims": [
-        {"name": "Auto Parts Manufacturer Z", "sector": "Manufacturing", "date": "2025-06-05"},
-        {"name": "Hospital Group AA", "sector": "Healthcare", "date": "2025-08-20"},
-        {"name": "Regional Bank BB", "sector": "Banking", "date": "2025-10-30"},
-        {"name": "Industrial Group CC", "sector": "Manufacturing", "date": "2025-12-15"},
-        {"name": "Municipal Council DD", "sector": "Public Administration", "date": "2026-02-05"},
-        {"name": "Telecom Reseller EE", "sector": "Telecommunications", "date": "2026-04-22"}
+        {"name": "Auto Parts Manufacturer TT", "sector": "Manufacturing",          "date": "2024-08-20"},
+        {"name": "Hospital Group UU",          "sector": "Healthcare",             "date": "2024-12-15"},
+        {"name": "Regional Bank VV",           "sector": "Banking",                "date": "2025-04-10"},
+        {"name": "Municipal Council WW",       "sector": "Public Administration",  "date": "2025-08-25"},
+        {"name": "Industrial Group XX",        "sector": "Manufacturing",          "date": "2025-11-30"},
+        {"name": "Telecom Reseller YY",        "sector": "Telecommunications",     "date": "2026-01-10"},
+        {"name": "Hospital Network ZZ",        "sector": "Healthcare",             "date": "2026-02-20"},
+        {"name": "Mid-Tier Bank AAA",          "sector": "Banking",                "date": "2026-03-15"},
+        {"name": "Energy Cooperative BBB",     "sector": "Energy",                 "date": "2026-04-15"},
+        {"name": "Local Government CCC",       "sector": "Public Administration",  "date": "2026-04-28"}
       ]
     },
     {
       "id": "black_basta",
+      "mitre_id": "G1043",
+      "mitre_url": "https://attack.mitre.org/groups/G1043/",
       "name": "Black Basta",
       "aliases": ["BlackBasta", "Storm-1811"],
       "country": "Russia (criminal)",
       "type": "ransomware",
-      "description": "Active ransomware operation since 2022, with overlap to former Conti operators. Manufacturing, healthcare and high-value B2B targets.",
-      "top_ttps": [
+      "description": "Active ransomware operation since 2022, with overlap to former Conti operators. Manufacturing, healthcare and high-value B2B targets. Telecom victims occur via MSP / supply-chain compromises rather than direct targeting.",
+      "ttps": [
         {"id": "T1486", "name": "Data Encrypted for Impact", "tactic": "Impact"},
         {"id": "T1490", "name": "Inhibit System Recovery", "tactic": "Impact"},
         {"id": "T1059.003", "name": "Windows Command Shell", "tactic": "Execution"},
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"},
         {"id": "T1021.002", "name": "SMB/Windows Admin Shares", "tactic": "Lateral Movement"}
       ],
-      "sector_ttp_affinity": {
-        "Manufacturing": 0.75,
-        "Healthcare": 0.65,
-        "ICT Service Management": 0.50,
-        "Energy": 0.40,
-        "Banking": 0.40,
-        "Telecommunications": 0.30,
-        "Submarine Cable Operators": 0.15
+      "sector_targeting": {
+        "Manufacturing":             {"p_sect": 0.25, "p_ttp": 0.75},
+        "Healthcare":                {"p_sect": 0.20, "p_ttp": 0.65},
+        "ICT Service Management":    {"p_sect": 0.10, "p_ttp": 0.50},
+        "Public Administration":     {"p_sect": 0.10, "p_ttp": 0.50},
+        "Energy":                    {"p_sect": 0.08, "p_ttp": 0.45},
+        "Banking":                   {"p_sect": 0.07, "p_ttp": 0.40},
+        "Telecommunications":        {"p_sect": 0.05, "p_ttp": 0.30},
+        "Submarine Cable Operators": {"p_sect": 0.02, "p_ttp": 0.15}
       },
-      "exposure_score_by_client": {"default": 70, "telecom_eu": 50, "submarine_cable_op": 45},
+      "default_security_score": 70,
+      "security_score_overrides_by_client": {"telecom_eu": 50, "submarine_cable_op": 45},
       "victims": [
-        {"name": "Aerospace Supplier FF", "sector": "Manufacturing", "date": "2025-07-12"},
-        {"name": "Hospital Network GG", "sector": "Healthcare", "date": "2025-11-10"},
-        {"name": "Industrial Manufacturer HH", "sector": "Manufacturing", "date": "2026-02-28"}
+        {"name": "Aerospace Supplier DDD",   "sector": "Manufacturing",          "date": "2024-09-15"},
+        {"name": "Hospital Network EEE",     "sector": "Healthcare",             "date": "2025-02-22"},
+        {"name": "Industrial Manufacturer FFF","sector": "Manufacturing",        "date": "2025-08-10"},
+        {"name": "Heavy Industry Group GGG", "sector": "Manufacturing",          "date": "2025-12-08"},
+        {"name": "Healthcare Provider HHH",  "sector": "Healthcare",             "date": "2026-01-22"},
+        {"name": "City Hall III",            "sector": "Public Administration",  "date": "2026-03-12"},
+        {"name": "Telecom MSP Reseller JJJ", "sector": "Telecommunications",     "date": "2026-03-25"},
+        {"name": "Power Distributor KKK",    "sector": "Energy",                 "date": "2026-04-05"}
       ]
     },
     {
       "id": "clop",
+      "mitre_id": null,
+      "mitre_url": "https://attack.mitre.org/software/S0611/",
       "name": "Cl0p",
       "aliases": ["TA505 (overlap)", "FIN11 (overlap)", "Lace Tempest"],
       "country": "Russia (criminal)",
-      "type": "extortion",
-      "description": "Extortion-focused actor, repeatedly leveraging zero-day exploits in managed file transfer software (MOVEit, GoAnywhere, Cleo) for mass exploitation campaigns.",
-      "top_ttps": [
+      "type": "cybercriminal",
+      "description": "Extortion-focused actor, repeatedly leveraging zero-day exploits in managed file transfer software (MOVEit, GoAnywhere, Cleo) for mass exploitation campaigns. Classified as cybercriminal in this fixture (closest enum value); operationally an extortion-as-a-service brand.",
+      "ttps": [
         {"id": "T1190", "name": "Exploit Public-Facing Application", "tactic": "Initial Access"},
         {"id": "T1567", "name": "Exfiltration Over Web Service", "tactic": "Exfiltration"},
         {"id": "T1041", "name": "Exfiltration Over C2 Channel", "tactic": "Exfiltration"},
         {"id": "T1059.001", "name": "PowerShell", "tactic": "Execution"},
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"}
       ],
-      "sector_ttp_affinity": {
-        "Financial Market Infrastructure": 0.80,
-        "Public Administration": 0.70,
-        "Banking": 0.60,
-        "Food": 0.45,
-        "Healthcare": 0.40,
-        "Manufacturing": 0.40,
-        "Telecommunications": 0.30,
-        "Submarine Cable Operators": 0.10
+      "sector_targeting": {
+        "Financial Market Infrastructure": {"p_sect": 0.20, "p_ttp": 0.80},
+        "Public Administration":           {"p_sect": 0.20, "p_ttp": 0.70},
+        "Banking":                         {"p_sect": 0.15, "p_ttp": 0.60},
+        "Manufacturing":                   {"p_sect": 0.10, "p_ttp": 0.45},
+        "Healthcare":                      {"p_sect": 0.10, "p_ttp": 0.45},
+        "Food":                            {"p_sect": 0.07, "p_ttp": 0.45},
+        "ICT Service Management":          {"p_sect": 0.05, "p_ttp": 0.50},
+        "Telecommunications":              {"p_sect": 0.03, "p_ttp": 0.30},
+        "Submarine Cable Operators":       {"p_sect": 0.01, "p_ttp": 0.10}
       },
-      "exposure_score_by_client": {"default": 75, "telecom_eu": 55, "submarine_cable_op": 50},
+      "default_security_score": 75,
+      "security_score_overrides_by_client": {"telecom_eu": 55, "submarine_cable_op": 50},
       "victims": [
-        {"name": "Asset Manager II", "sector": "Financial Market Infrastructure", "date": "2025-08-04"},
-        {"name": "State Agency JJ", "sector": "Public Administration", "date": "2025-09-28"},
-        {"name": "Mid-Tier Bank KK", "sector": "Banking", "date": "2026-01-12"},
-        {"name": "Food Distributor LL", "sector": "Food", "date": "2026-03-25"}
+        {"name": "Asset Manager LLL",        "sector": "Financial Market Infrastructure", "date": "2024-10-25"},
+        {"name": "State Agency MMM",         "sector": "Public Administration",            "date": "2025-02-18"},
+        {"name": "European Bank NNN",        "sector": "Banking",                          "date": "2025-06-22"},
+        {"name": "Hospital Trust OOO",       "sector": "Healthcare",                       "date": "2025-09-15"},
+        {"name": "Mid-Tier Bank PPP",        "sector": "Banking",                          "date": "2025-12-08"},
+        {"name": "Federal Office QQQ",       "sector": "Public Administration",            "date": "2026-01-22"},
+        {"name": "Industrial Conglomerate RRR","sector": "Manufacturing",                  "date": "2026-03-15"},
+        {"name": "Healthcare Provider SSS",  "sector": "Healthcare",                       "date": "2026-04-08"},
+        {"name": "Custodian Bank TTT",       "sector": "Financial Market Infrastructure",  "date": "2026-04-25"}
       ]
     },
     {
       "id": "alphv",
+      "mitre_id": null,
+      "mitre_url": "https://attack.mitre.org/software/S1068/",
       "name": "ALPHV/BlackCat",
       "aliases": ["BlackCat", "Noberus", "ALPHV"],
       "country": "Russia (criminal)",
       "type": "ransomware",
-      "description": "Rust-based ransomware-as-a-service operation. Aggressive double-extortion with public leak sites; affiliates active across healthcare, energy and transport.",
-      "top_ttps": [
+      "description": "Rust-based ransomware-as-a-service operation. Aggressive double-extortion with public leak sites; affiliates active across healthcare, energy and transport. Brand exited in 2024, used here as historical proxy for the affiliate ecosystem.",
+      "ttps": [
         {"id": "T1486", "name": "Data Encrypted for Impact", "tactic": "Impact"},
         {"id": "T1078", "name": "Valid Accounts", "tactic": "Initial Access"},
         {"id": "T1021.001", "name": "Remote Desktop Protocol", "tactic": "Lateral Movement"},
         {"id": "T1567", "name": "Exfiltration Over Web Service", "tactic": "Exfiltration"},
         {"id": "T1490", "name": "Inhibit System Recovery", "tactic": "Impact"}
       ],
-      "sector_ttp_affinity": {
-        "Healthcare": 0.80,
-        "Energy": 0.55,
-        "Maritime Transport": 0.50,
-        "Submarine Cable Operators": 0.45,
-        "Telecommunications": 0.45,
-        "Manufacturing": 0.45,
-        "ICT Service Management": 0.40
+      "sector_targeting": {
+        "Healthcare":                {"p_sect": 0.25, "p_ttp": 0.80},
+        "Energy":                    {"p_sect": 0.15, "p_ttp": 0.55},
+        "Banking":                   {"p_sect": 0.10, "p_ttp": 0.50},
+        "Maritime Transport":        {"p_sect": 0.10, "p_ttp": 0.50},
+        "Telecommunications":        {"p_sect": 0.10, "p_ttp": 0.45},
+        "Submarine Cable Operators": {"p_sect": 0.05, "p_ttp": 0.45},
+        "Manufacturing":             {"p_sect": 0.05, "p_ttp": 0.45},
+        "ICT Service Management":    {"p_sect": 0.05, "p_ttp": 0.40}
       },
-      "exposure_score_by_client": {"default": 72, "telecom_eu": 60, "submarine_cable_op": 70},
+      "default_security_score": 72,
+      "security_score_overrides_by_client": {"telecom_eu": 60, "submarine_cable_op": 70},
       "victims": [
-        {"name": "Healthcare Provider MM", "sector": "Healthcare", "date": "2025-06-22"},
-        {"name": "Oil Pipeline Operator NN", "sector": "Energy", "date": "2025-09-15"},
-        {"name": "Hospital Group OO", "sector": "Healthcare", "date": "2025-12-10"},
-        {"name": "Container Shipping PP", "sector": "Maritime Transport", "date": "2026-04-05"}
+        {"name": "Healthcare Provider UUU",   "sector": "Healthcare",         "date": "2024-09-12"},
+        {"name": "Oil Pipeline Operator VVV", "sector": "Energy",             "date": "2025-02-25"},
+        {"name": "Hospital Group WWW",        "sector": "Healthcare",         "date": "2025-07-30"},
+        {"name": "Container Shipping XXX",    "sector": "Maritime Transport", "date": "2025-12-15"},
+        {"name": "Hospital Trust YYY",        "sector": "Healthcare",         "date": "2026-01-18"},
+        {"name": "Telecom B2B Carrier ZZZ",   "sector": "Telecommunications", "date": "2026-02-10"},
+        {"name": "Private Bank AAAA",         "sector": "Banking",            "date": "2026-03-22"},
+        {"name": "Energy Distributor BBBB",   "sector": "Energy",             "date": "2026-04-15"}
       ]
     }
   ]

@@ -16,7 +16,7 @@ EXPORTS_DIR = DATA_DIR / "exports"
 DLS_DIR = DATA_DIR / "dls"  # Phase 3 input directory
 
 # --- Scoring -------------------------------------------------------------
-ACTIVE_FORMULA = "geometric_mean_v1"  # see scoring/formulas.py for choices
+ACTIVE_FORMULA = "geometric_mean_floored_v1"  # see scoring/formulas.py for choices
 
 # --- Client / SecurityScore ---------------------------------------------
 DEFAULT_CLIENT_ID = "default"
