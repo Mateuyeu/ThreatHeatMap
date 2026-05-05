@@ -158,36 +158,45 @@ function hoverText(actor) {
   ].join("<br>");
 }
 
-// Per-actor textposition. Default is 'top center'; flipped to 'bottom center'
-// when nearby earlier actors are already at 'top center'. Vertical-only
-// alternation (sub-pass C.1 spec). Single pass, deterministic order = order
-// in /api/actors. For 3+ clusters we minority-vote to spread the labels.
+// Per-actor textposition. Default is 'top center'; flips through a 6-position
+// cycle (top/bottom x left/center/right) when nearby earlier neighbours are
+// already at preceding positions. Points stay at their computed positions;
+// only labels move. Single pass, deterministic order = order in /api/actors.
+// 7+ point clusters degrade to overlap (rare, expected only at the floor
+// collocation point in geometric_mean_floored_v1).
 const JITTER_THRESHOLD = 8;
+const JITTER_POSITIONS = [
+  "top center",
+  "bottom center",
+  "top right",
+  "bottom right",
+  "top left",
+  "bottom left",
+];
 function computeTextPositions(actors) {
   const positions = new Map();
   for (let i = 0; i < actors.length; i++) {
     const a = actors[i];
-    let topNeighbors = 0;
-    let bottomNeighbors = 0;
+    const used = Object.create(null);
+    let hasNeighbour = false;
     for (let j = 0; j < i; j++) {
       const b = actors[j];
       const dx = (a.x ?? 0) - (b.x ?? 0);
       const dy = (a.y ?? 0) - (b.y ?? 0);
       if (Math.hypot(dx, dy) < JITTER_THRESHOLD) {
-        const earlier = positions.get(b.id);
-        if (earlier === "bottom center") bottomNeighbors++;
-        else topNeighbors++;
+        const p = positions.get(b.id) || "top center";
+        used[p] = (used[p] || 0) + 1;
+        hasNeighbour = true;
       }
     }
-    let pos = "top center";
-    if (topNeighbors === 0 && bottomNeighbors === 0) {
-      pos = "top center";
-    } else if (topNeighbors > bottomNeighbors) {
-      pos = "bottom center";
-    } else {
-      pos = "top center";
+    let chosen = "top center";
+    if (hasNeighbour) {
+      // Pick the first position in priority order with no neighbour yet.
+      // If all 6 are taken (7+ collocated points), fall back to top center.
+      const free = JITTER_POSITIONS.find(p => !used[p]);
+      chosen = free || "top center";
     }
-    positions.set(a.id, pos);
+    positions.set(a.id, chosen);
   }
   return positions;
 }
