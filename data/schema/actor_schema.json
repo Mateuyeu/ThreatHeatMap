@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://threatheatmap.local/schema/actor_schema.json",
+  "title": "ThreatHeatMap Actor",
+  "description": "Schema for a single threat actor record as stored in data/fixtures/actors_demo.json (Phase 1) and as the target shape for the MITRE / DLS connectors in Phase 2-3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "type",
+    "description",
+    "ttps",
+    "sector_targeting",
+    "default_security_score",
+    "victims"
+  ],
+  "properties": {
+    "id": {
+      "description": "URL-safe slug used in API routes (/api/actor/<id>). Lowercase letters, digits and underscores only.",
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "minLength": 1
+    },
+    "mitre_id": {
+      "description": "MITRE ATT&CK Group ID when available (e.g. G0032). Null for actors that have no formal Group entry (most ransomware brands).",
+      "type": ["string", "null"],
+      "pattern": "^G[0-9]{4}$"
+    },
+    "mitre_url": {
+      "description": "Canonical MITRE ATT&CK URL for the actor or, when no Group entry exists, the closest software entry (e.g. https://attack.mitre.org/software/S1063/).",
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "name": {
+      "description": "Human-readable primary name of the actor.",
+      "type": "string",
+      "minLength": 1
+    },
+    "aliases": {
+      "description": "Alternative names used across CTI vendors (Mandiant, Microsoft, CrowdStrike, etc.).",
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": []
+    },
+    "country": {
+      "description": "Attribution country or affiliation tag. Free-form string; null when unknown.",
+      "type": ["string", "null"]
+    },
+    "type": {
+      "description": "Operational category. Enum is intentionally narrow; documented mappings live in data/fixtures/RATIONALE.md.",
+      "type": "string",
+      "enum": ["state-sponsored", "ransomware", "hacktivist", "cybercriminal", "unknown"]
+    },
+    "description": {
+      "description": "Short narrative of the actor's mandate, tradecraft and operational tempo.",
+      "type": "string",
+      "minLength": 1
+    },
+    "ttps": {
+      "description": "Top techniques attributed to the actor. ATT&CK technique IDs.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "description": "ATT&CK technique ID (e.g. T1566.001).",
+            "type": "string",
+            "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+          },
+          "name": {
+            "description": "ATT&CK technique name.",
+            "type": "string",
+            "minLength": 1
+          },
+          "tactic": {
+            "description": "Primary ATT&CK tactic for this technique.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sector_targeting": {
+      "description": "Per-sector targeting profile. Sector keys MUST match canonical names in data/sectors.json. p_sect is a long-term baseline used by the runtime only when the actor has zero victims in the selected window. p_ttp is the sector-specific TTP relevance coefficient.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["p_sect", "p_ttp"],
+        "properties": {
+          "p_sect": {
+            "description": "Long-term P_sect baseline for this (actor, sector). Range [0, 1].",
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "p_ttp": {
+            "description": "Sector-specific TTP relevance coefficient. Range [0, 1].",
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        }
+      }
+    },
+    "default_security_score": {
+      "description": "Per-actor default SecurityScore (0..100). Used when no per-client override and no UI override are set.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "security_score_overrides_by_client": {
+      "description": "Per-client SecurityScore overrides. Keys are client IDs (matching the top-level fixture clients[]). Values are scores in [0, 100].",
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "default": {}
+    },
+    "victims": {
+      "description": "Documented (or simulated, in Phase 1) victim records. Sector strings MUST match canonical names in data/sectors.json. Date is ISO 8601 (YYYY-MM-DD).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sector", "date"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sector": {
+            "type": "string",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          }
+        }
+      }
+    }
+  }
+}

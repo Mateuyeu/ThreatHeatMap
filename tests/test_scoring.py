@@ -52,10 +52,21 @@ def test_floor_epsilon_value():
     assert meta["floor_epsilon"] == pytest.approx(0.05, abs=APPROX)
 
 
-def test_floored_intent_zero_zero_uses_floor():
-    # sqrt(0.05 * 0.05) * 100 = 0.05 * 100 = 5.0
+# --- Floor contract anchor (patch v1.1 sub-pass B section 5) -----------
+# Y at (P_sect=0, P_ttp=0) under geometric_mean_floored_v1 MUST be exactly
+# sqrt(eps * eps) * 100 = eps * 100 = 5.0 (with eps = 0.05). This is the
+# behavioural contract of the floored formula and the regression guard if
+# anyone touches FLOOR_EPSILON_V1.
+
+def test_floored_formula_floor_contract_at_zero_zero():
+    """Contract: floored_v1 with P_sect=0, P_ttp=0 -> Y exactly 5.0."""
     got = formulas.compute_intent(0.0, 0.0, formula_id="geometric_mean_floored_v1")
-    assert got == pytest.approx(5.0, abs=APPROX)
+    expected = formulas.FLOOR_EPSILON_V1 * 100.0  # 5.0 by construction
+    assert expected == 5.0
+    assert got == pytest.approx(expected, abs=APPROX)
+    # Same call via the public formula spec, to catch any helper-level drift:
+    direct = formulas.FORMULAS["geometric_mean_floored_v1"]["intent"](0.0, 0.0)
+    assert direct == pytest.approx(5.0, abs=APPROX)
 
 
 @pytest.mark.parametrize(
